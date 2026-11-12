@@ -150,6 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 로컬 스토리지 키
   const FILTER_STORAGE_KEY = 'beautycall_filter_settings';
   const AUTH_STORAGE_KEY = 'beautycall_access_key';
+  const NICKNAME_STORAGE_KEY = 'beautycall_user_nickname';
+  const ROOM_STORAGE_KEY = 'beautycall_user_room_id';
 
   // 현재 인증 키
   let currentAccessKey = localStorage.getItem(AUTH_STORAGE_KEY) || '';
@@ -513,8 +515,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const paramKey = urlParams.get('key');
   const paramRoom = urlParams.get('room');
-  if (paramRoom && roomIdInput) {
-    roomIdInput.value = paramRoom;
+
+  // 💾 마지막으로 설정한 닉네임 및 Room ID 자동 복원
+  function restoreSavedUserInfo() {
+    const savedNickname = localStorage.getItem(NICKNAME_STORAGE_KEY);
+    if (savedNickname && nicknameInput) {
+      nicknameInput.value = savedNickname;
+    }
+
+    const savedRoom = localStorage.getItem(ROOM_STORAGE_KEY);
+    if (savedRoom && roomIdInput) {
+      roomIdInput.value = savedRoom;
+    }
+
+    // URL에 ?room=... 쿼리가 있는 경우 URL 값을 우선 적용 및 자동 저장
+    if (paramRoom && roomIdInput) {
+      roomIdInput.value = paramRoom;
+      localStorage.setItem(ROOM_STORAGE_KEY, paramRoom);
+    }
+  }
+
+  restoreSavedUserInfo();
+
+  // 닉네임과 Room ID 입력 시 실시간 자동 저장
+  if (nicknameInput) {
+    nicknameInput.addEventListener('input', () => {
+      const val = nicknameInput.value.trim();
+      if (val) localStorage.setItem(NICKNAME_STORAGE_KEY, val);
+    });
+  }
+  if (roomIdInput) {
+    roomIdInput.addEventListener('input', () => {
+      const val = roomIdInput.value.trim();
+      if (val) localStorage.setItem(ROOM_STORAGE_KEY, val);
+    });
   }
 
   // 초기 인증 시도
@@ -840,6 +874,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   joinCallBtn.addEventListener('click', () => {
     currentNickname = nicknameInput.value.trim() || 'User';
     currentRoomId = roomIdInput.value.trim() || 'room-101';
+
+    // 💾 마지막 사용한 닉네임과 방 번호 영구 저장
+    localStorage.setItem(NICKNAME_STORAGE_KEY, currentNickname);
+    localStorage.setItem(ROOM_STORAGE_KEY, currentRoomId);
 
     // 뷰티 & 메이크업 필터가 적용된 Canvas에서 실시간 비디오 스트림 추출
     const filteredVideoStream = filterProcessor.getFilteredStream(30);
