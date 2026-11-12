@@ -658,99 +658,126 @@ class BeautyFilterProcessor {
       const rightEye = coords.rightEye;
       const eyeDist = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
 
-      // 눈 제외 타원 반경 (눈동자와 눈꺼풀 안쪽 도트 배제)
-      const eyeExclusionRadiusX = eyeDist * 0.36;
-      const eyeExclusionRadiusY = eyeDist * 0.24;
+      // 1. 눈과 입술 제외 반경 (표정이 자연스럽고 예쁘게 드러나도록 설정)
+      const eyeExclusionRadiusX = eyeDist * 0.38;
+      const eyeExclusionRadiusY = eyeDist * 0.26;
+      const lipRadiusX = (coords.lip.radiusX || 30) * 1.25;
+      const lipRadiusY = (coords.lip.radiusY || 20) * 1.25;
 
-      // 점 기본 반지름
-      const baseDotRadius = Math.max(1.8, scale * 0.016);
+      // 2. 점의 크기: 조금만 더 큼직하게 (약 3.2 ~ 4.6px)
+      const baseDotRadius = Math.max(3.2, scale * 0.022);
 
-      this.ctx.save();
-      this.ctx.fillStyle = '#ffffff';
-      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.85)';
-      this.ctx.shadowBlur = Math.max(2, baseDotRadius * 0.8);
+      // 3. 일정한 패턴을 위한 최소 거리 간격 (얼굴 크기 비례: 약 15~22px)
+      //    코나 입 주변에 점이 뭉치지 않고 얼굴 전체에 균일한 간격 유지
+      const minSpacing = Math.max(14, scale * 0.088);
+      const minSpacingSq = minSpacing * minSpacing;
 
-      this.ctx.beginPath();
+      // 4. 머리카락(헤어라인) 및 턱 바깥 침범 방지용 순수 얼굴 윤곽 Path
+      const facePath = new Path2D();
+      for (let i = 0; i < this.faceOvalIndices.length; i++) {
+        const idx = this.faceOvalIndices[i];
+        const px = lm[idx].x * width;
+        const py = lm[idx].y * height;
+        if (i === 0) facePath.moveTo(px, py);
+        else facePath.lineTo(px, py);
+      }
+      facePath.closePath();
 
-      // 얼굴의 3D 곡면을 완벽히 감싸기 위한 3D 포인트 목록 수집: { x, y, z }
-      const points = [];
+      // 코끝 중심점 (콧망울 밀집 완화용)
+      const noseTip = lm[4] || lm[1];
+      const noseTipX = noseTip ? noseTip.x * width : 0;
+      const noseTipY = noseTip ? noseTip.y * height : 0;
 
-      // 1. MediaPipe 468개 랜드마크 정점 전체 (실제 얼굴 3D 토폴로지에 1:1 고정)
+      // 균일한 일정한 패턴으로 선택된 3D 포인트 목록
+      const selectedPoints = [];
+
+      // 랜드마크를 순회하며 균일한 간격(Poisson Disk)으로 샘플링
       for (let i = 0; i < 468; i++) {
-        if (!lm[i]) continue;
-        points.push({
-          x: lm[i].x * width,
-          y: lm[i].y * height,
-          z: lm[i].z || 0
+        const pt = lm[i];
+        if (!pt) continue;
+
+        const px = pt.x * width;
+        const py = pt.y * height;
+
+        // (1) 머리카락 및 턱선 바깥 제외 (얼굴 피부 윤곽선 내부만 허용)
+        if (!this.ctx.isPointInPath(facePath, px, py)) continue;
+
+        // (2) 왼쪽 눈 제외
+        const dxL = (px - leftEye.x) / eyeExclusionRadiusX;
+        const dyL = (py - leftEye.y) / eyeExclusionRadiusY;
+        if (dxL * dxL + dyL * dyL < 1.0) continue;
+
+        // (3) 오른쪽 눈 제외
+        const dxR = (px - rightEye.x) / eyeExclusionRadiusX;
+        const dyR = (py - rightEye.y) / eyeExclusionRadiusY;
+        if (dxR * dxR + dyR * dyR < 1.0) continue;
+
+        // (4) 입술 영역 제외 (입 주변 뭉침 및 징그러운 느낌 방지)
+        const dxLip = (px - coords.lip.x) / lipRadiusX;
+        const dyLip = (py - coords.lip.y) / lipRadiusY;
+        if (dxLip * dxLip + dyLip * dyLip < 1.0) continue;
+
+        // (5) 콧볼/콧구멍 바로 밑 과도한 밀집 방지 (코끝 중심 하나만 남기고 주변 미세점 정리)
+        if (noseTip) {
+          const distToNose = Math.hypot(px - noseTipX, py - noseTipY);
+          if (distToNose < minSpacing * 0.75 && i !== 4 && i !== 1) {
+            continue;
+          }
+        }
+
+        // (6) 얼굴 곡선을 따라 일정한 간격 유지 검사
+        let isTooClose = false;
+        for (let j = 0; j < selectedPoints.length; j++) {
+          const sp = selectedPoints[j];
+          const distSq = (px - sp.x) * (px - sp.x) + (py - sp.y) * (py - sp.y);
+          if (distSq < minSpacingSq) {
+            isTooClose = true;
+            break;
+          }
+        }
+        if (isTooClose) continue;
+
+        selectedPoints.push({
+          x: px,
+          y: py,
+          z: pt.z || 0
         });
       }
 
-      // 2. 이마 상단 곡면 보간 (헤어라인 위쪽으로 둥글게 이마를 감싸도록 자연스럽게 확장)
-      const foreheadIndices = [109, 67, 103, 54, 21, 10, 338, 297, 332, 284, 251];
-      const noseTip = lm[1] || lm[4];
-      const foreheadCenter = lm[10];
-      const faceUpX = (foreheadCenter.x - noseTip.x) * width;
-      const faceUpY = (foreheadCenter.y - noseTip.y) * height;
-      const upLen = Math.hypot(faceUpX, faceUpY) || 1;
-      const normUpX = faceUpX / upLen;
-      const normUpY = faceUpY / upLen;
+      // 5. 점 렌더링: 은은하고 흐린 느낌의 소프트 펄 글로우 도트
+      this.ctx.save();
 
-      // 이마 위쪽 2개 레이어 곡면 도트 추가
-      for (let layer = 1; layer <= 2; layer++) {
-        const liftDist = scale * 0.11 * layer;
-        for (let i = 0; i < foreheadIndices.length; i++) {
-          const pt = lm[foreheadIndices[i]];
-          if (!pt) continue;
-          points.push({
-            x: pt.x * width + normUpX * liftDist,
-            y: pt.y * height + normUpY * liftDist,
-            z: (pt.z || 0) + layer * 0.03
-          });
-        }
-      }
+      // 바깥쪽 부드러운 소프트 글로우
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+      this.ctx.shadowBlur = Math.max(4, baseDotRadius * 1.5); // 흐리고 몽환적인 발광
 
-      // 3. 턱 아래 목 곡면 보간 (턱선을 따라 자연스럽게 아래로 전개)
-      const chinIndices = [58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288];
-      const faceDownX = -normUpX;
-      const faceDownY = -normUpY;
-
-      for (let layer = 1; layer <= 2; layer++) {
-        const dropDist = scale * 0.1 * layer;
-        for (let i = 0; i < chinIndices.length; i++) {
-          const pt = lm[chinIndices[i]];
-          if (!pt) continue;
-          points.push({
-            x: pt.x * width + faceDownX * dropDist,
-            y: pt.y * height + faceDownY * dropDist,
-            z: (pt.z || 0) + layer * 0.04
-          });
-        }
-      }
-
-      // 4. 각 3D 정점을 순회하며 눈 영역 제외 및 원근감(Depth) 도트 렌더링
-      for (let i = 0; i < points.length; i++) {
-        const p = points[i];
-
-        // 왼쪽 눈 내부인지 검사 (제외)
-        const dxL = (p.x - leftEye.x) / eyeExclusionRadiusX;
-        const dyL = (p.y - leftEye.y) / eyeExclusionRadiusY;
-        if (dxL * dxL + dyL * dyL < 1.0) continue;
-
-        // 오른쪽 눈 내부인지 검사 (제외)
-        const dxR = (p.x - rightEye.x) / eyeExclusionRadiusX;
-        const dyR = (p.y - rightEye.y) / eyeExclusionRadiusY;
-        if (dxR * dxR + dyR * dyR < 1.0) continue;
-
-        // 3D 깊이(z)에 따른 원근감 스케일링 (카메라와 가까운 코/앞볼은 크고, 뒤로 감긴 옆볼/외곽은 작아짐)
-        const zDepth = p.z;
-        const zFactor = Math.max(0.65, Math.min(1.35, 1.0 - zDepth * 2.8));
+      this.ctx.beginPath();
+      for (let i = 0; i < selectedPoints.length; i++) {
+        const p = selectedPoints[i];
+        // 3D 깊이(z) 반영: 코/볼 중심은 조금 크고, 외곽으로 갈수록 자연스럽게 원근 축소
+        const zFactor = Math.max(0.78, Math.min(1.22, 1.0 - (p.z || 0) * 1.8));
         const r = baseDotRadius * zFactor;
 
         this.ctx.moveTo(p.x + r, p.y);
         this.ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
       }
-
       this.ctx.fill();
+
+      // 안쪽 은은한 코어 하이라이트 (너무 딱딱하지 않게 반투명 소프트 화이트로 채움)
+      this.ctx.shadowBlur = 0;
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      this.ctx.beginPath();
+      for (let i = 0; i < selectedPoints.length; i++) {
+        const p = selectedPoints[i];
+        const zFactor = Math.max(0.78, Math.min(1.22, 1.0 - (p.z || 0) * 1.8));
+        const r = (baseDotRadius * 0.5) * zFactor;
+
+        this.ctx.moveTo(p.x + r, p.y);
+        this.ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      }
+      this.ctx.fill();
+
       this.ctx.restore();
     }
 

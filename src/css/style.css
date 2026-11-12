@@ -42,10 +42,14 @@ body {
 /* ================= 대기실 (Lobby) 스타일 ================= */
 #lobbyView {
   flex-direction: column;
-  overflow-y: auto;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
+  justify-content: flex-start;
+  padding: 24px 16px 80px 16px;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
 }
 
 .lobby-container {
@@ -996,23 +1000,25 @@ input[type="range"] {
 /* 2. 모바일 스마트폰 환경 (최대 너비 640px) */
 @media (max-width: 640px) {
   html, body {
-    overflow-y: auto;
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
   }
 
   .view {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
   }
 
-  /* 대기실 (Lobby) 모바일 최적화 */
+  /* 대기실 (Lobby) 모바일 최적화: 끝까지 확실한 세로 스크롤 및 하단 140px 여백 보장 */
   #lobbyView {
-    padding: 14px 12px 32px 12px;
-    justify-content: flex-start;
+    padding: 16px 12px 140px 12px !important;
+    justify-content: flex-start !important;
+    overflow-y: scroll !important;
+    -webkit-overflow-scrolling: touch;
+    height: 100vh;
+    height: 100dvh;
   }
 
   .lobby-container {
