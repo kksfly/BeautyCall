@@ -60,6 +60,47 @@
     </div>
   </div>
 
+  <!-- ================= [화면 공유 & Watch Party 하드웨어 가속 안내 TIP 모달] ================= -->
+  <div id="screenShareTipModal" class="security-overlay hidden">
+    <div class="tip-card">
+      <div class="tip-header">
+        <span class="tip-header-icon">🎬</span>
+        <h3>Watch Party & Screen Share</h3>
+        <button id="closeScreenTipModalBtn" class="close-btn">✕</button>
+      </div>
+
+      <div class="tip-body">
+        <div class="tip-item">
+          <div class="tip-item-title">
+            <span class="tip-pill sound">🔊 Sound</span>
+            <strong>영상 소리도 함께 공유하기</strong>
+          </div>
+          <p>공유 창 선택 시 하단의 <strong>「시스템 오디오 공유」</strong> 또는 <strong>「탭 오디오도 함께 공유」</strong> 체크박스를 꼭 체크해 주세요.</p>
+        </div>
+
+        <div class="tip-item highlight">
+          <div class="tip-item-title">
+            <span class="tip-pill ott">💡 Netflix / OTT TIP</span>
+            <strong>검은 화면(Black Screen) 방지 안내</strong>
+          </div>
+          <p>넷플릭스, 웨이브 등 OTT 영상이 검은 화면으로 공유될 경우, 브라우저 설정에서 <strong>「가능한 경우 그래픽 가속 사용 (하드웨어 가속)」</strong>을 끄고 브라우저를 재시작하면 영상이 깨끗하게 공유됩니다.</p>
+        </div>
+
+        <div class="tip-checkbox-row">
+          <label class="tip-checkbox-label">
+            <input type="checkbox" id="dontShowScreenTipAgain" />
+            <span>이 안내를 다시 보지 않기</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="tip-footer">
+        <button id="cancelScreenShareBtn" class="btn btn-secondary">Cancel</button>
+        <button id="proceedScreenShareBtn" class="btn btn-primary">Start Sharing</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 숨겨진 원본 웹캠 비디오 요소 (캔버스 렌더링 소스) -->
   <video id="rawWebcam" autoplay playsinline muted style="display: none;"></video>
 
@@ -265,6 +306,20 @@
       <button id="closeWaitingNoticeBtn" class="notice-close-btn" title="닫기">✕</button>
     </div>
 
+    <!-- 🎬 화면 공유(Watch Party) 실시간 알림 및 팝아웃 열기 바 -->
+    <div id="watchPartyBanner" class="watch-party-banner hidden">
+      <div class="banner-left">
+        <span class="live-dot"></span>
+        <span id="watchPartyBannerText" class="banner-title">🎬 <strong>Participant</strong> is sharing screen & audio</span>
+      </div>
+      <div class="banner-right">
+        <button id="openPopoutBtn" class="banner-btn primary" title="Open Watch Party in separate window">
+          ⧉ Open in New Window
+        </button>
+        <button id="closeWatchPartyBannerBtn" class="banner-btn close" title="Hide notification">✕</button>
+      </div>
+    </div>
+
     <!-- 다자간 비디오 그리드 (1~4명 자동 크기 배치) -->
     <main class="video-grid-container">
       <div id="videoGrid" class="video-grid count-1">
@@ -302,6 +357,13 @@
         </button>
         <button id="callToggleFlipBtn" class="control-btn active" title="Toggle Mirror / Flip">
           <!-- 좌우 반전 SVG -->
+        </button>
+        <button id="callToggleScreenBtn" class="control-btn screen-btn" title="Share Screen & Audio (Watch Party)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="3" rx="2"/>
+            <line x1="8" x2="16" y1="21" y2="21"/>
+            <line x1="12" x2="12" y1="17" y2="21"/>
+          </svg>
         </button>
         <button id="leaveCallBtn" class="control-btn leave-btn" title="Leave Call">
           <!-- 통화 종료 SVG -->

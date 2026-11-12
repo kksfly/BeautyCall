@@ -1626,3 +1626,264 @@ input[type="range"] {
   from { opacity: 0; transform: translate(-50%, -10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ================= 🎬 Watch Party & Screen Share UI ================= */
+
+/* 1. 화면 공유 툴바 버튼 */
+.control-btn.screen-btn {
+  background-color: var(--bg-tertiary);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.control-btn.screen-btn.sharing {
+  background: linear-gradient(135deg, #ff4757, #ff6b81);
+  border-color: #ff4757;
+  box-shadow: 0 0 18px rgba(255, 71, 87, 0.5);
+  animation: screenPulse 2s infinite;
+}
+
+@keyframes screenPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* 2. 통화 화면 상단 Watch Party 알림 배너 */
+.watch-party-banner {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 22, 34, 0.95);
+  border: 1px solid rgba(255, 71, 87, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 71, 87, 0.2);
+  backdrop-filter: blur(14px);
+  padding: 8px 16px;
+  border-radius: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  z-index: 105;
+  animation: bannerSlideDown 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bannerSlideDown {
+  from { opacity: 0; transform: translate(-50%, -15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner-left .live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #ff4757;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ff4757;
+  animation: pulseDot 1.5s infinite;
+}
+
+@keyframes pulseDot {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+.banner-title {
+  font-size: 13px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.banner-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.banner-btn.primary {
+  background: linear-gradient(135deg, #ff4757, #ff6b81);
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(255, 71, 87, 0.35);
+}
+
+.banner-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 71, 87, 0.5);
+}
+
+.banner-btn.close {
+  padding: 5px 8px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+}
+
+.banner-btn.close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* 3. 화면 공유 하드웨어 가속 안내 TIP 모달 */
+.tip-card {
+  background: rgba(24, 28, 40, 0.96);
+  border: 1px solid rgba(255, 75, 145, 0.35);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(255, 75, 145, 0.2);
+  border-radius: 22px;
+  padding: 28px 26px;
+  max-width: 520px;
+  width: 100%;
+  text-align: left;
+  animation: modalPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tip-header-icon {
+  font-size: 24px;
+  margin-right: 8px;
+}
+
+.tip-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+}
+
+.tip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.tip-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tip-item.highlight {
+  background: rgba(255, 165, 2, 0.08);
+  border-color: rgba(255, 165, 2, 0.3);
+}
+
+.tip-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tip-item-title strong {
+  font-size: 14px;
+  color: #fff;
+}
+
+.tip-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.tip-pill.sound {
+  background: rgba(46, 213, 115, 0.15);
+  color: #2ed573;
+  border: 1px solid rgba(46, 213, 115, 0.3);
+}
+
+.tip-pill.ott {
+  background: rgba(255, 165, 2, 0.2);
+  color: #ffa502;
+  border: 1px solid rgba(255, 165, 2, 0.4);
+}
+
+.tip-item p {
+  font-size: 12.5px;
+  color: #cbd5e0;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.tip-checkbox-row {
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.tip-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tip-checkbox-label input {
+  accent-color: var(--accent-pink);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.tip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.tip-footer .btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tip-footer .btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e0;
+}
+
+.tip-footer .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}

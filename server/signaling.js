@@ -532,12 +532,42 @@ io.on('connection', (socket) => {
     });
   });
 
+  // 🎬 화면 공유(Watch Party) 시작 브로드캐스트
+  socket.on('screen-share-start', ({ roomId, sharerName, streamId }) => {
+    if (rooms[roomId] && rooms[roomId][socket.id]) {
+      rooms[roomId][socket.id].isScreenSharing = true;
+      socket.to(roomId).emit('screen-share-started', {
+        sharerSocketId: socket.id,
+        sharerName: sharerName || rooms[roomId][socket.id].nickname,
+        streamId
+      });
+      console.log(`[Screen Share Started] ${rooms[roomId][socket.id].nickname} in Room: ${roomId}`);
+    }
+  });
+
+  // 🎬 화면 공유(Watch Party) 종료 브로드캐스트
+  socket.on('screen-share-stop', ({ roomId }) => {
+    if (rooms[roomId] && rooms[roomId][socket.id]) {
+      rooms[roomId][socket.id].isScreenSharing = false;
+      socket.to(roomId).emit('screen-share-stopped', {
+        sharerSocketId: socket.id
+      });
+      console.log(`[Screen Share Stopped] ${rooms[roomId][socket.id].nickname} in Room: ${roomId}`);
+    }
+  });
+
   // 연결 해제 처리
   socket.on('disconnecting', () => {
     for (const roomId of socket.rooms) {
       if (rooms[roomId] && rooms[roomId][socket.id]) {
         const user = rooms[roomId][socket.id];
         delete rooms[roomId][socket.id];
+
+        if (user.isScreenSharing) {
+          socket.to(roomId).emit('screen-share-stopped', {
+            sharerSocketId: socket.id
+          });
+        }
 
         socket.to(roomId).emit('user-left', {
           socketId: socket.id,

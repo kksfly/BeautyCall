@@ -2,21 +2,28 @@
  * WebRTC 다자간(최대 4인 Full-Mesh) 연결 관리자
  */
 class WebRTCManager {
-  constructor({ socketUrl, authKey, onRemoteStream, onUserLeft, onError, onConnected }) {
+  constructor({ socketUrl, authKey, onRemoteStream, onUserLeft, onError, onConnected, onRemoteScreenStream, onRemoteScreenStopped }) {
     this.socketUrl = socketUrl || (typeof window !== 'undefined' && window.location.protocol.startsWith('http')
       ? window.location.origin
       : 'https://beautycall-server.onrender.com');
     this.authKey = authKey || '';
     this.socket = null;
     this.localStream = null;
-    this.peers = {}; // { [socketId]: { peerConnection, nickname } }
+    this.screenStream = null; // 내가 공유 중인 화면 스트림
+    this.screenSenders = {};  // { [socketId]: RTCRtpSender[] }
+    this.peers = {}; // { [socketId]: { peerConnection, nickname, cameraStream, screenStream } }
     this.roomId = null;
     this.nickname = '';
+
+    this.remoteScreenInfo = null; // { sharerSocketId, sharerName, streamId }
+    this.currentRemoteScreenStream = null;
 
     this.onRemoteStream = onRemoteStream || (() => {});
     this.onUserLeft = onUserLeft || (() => {});
     this.onError = onError || (() => {});
     this.onConnected = onConnected || (() => {});
+    this.onRemoteScreenStream = onRemoteScreenStream || (() => {});
+    this.onRemoteScreenStopped = onRemoteScreenStopped || (() => {});
 
     this.iceServers = {
       iceServers: [
@@ -132,6 +139,29 @@ class WebRTCManager {
       this.closePeer(socketId);
       this.onUserLeft(socketId);
     });
+
+    // 🎬 화면 공유 시작 브로드캐스트 수신
+    this.socket.on('screen-share-started', ({ sharerSocketId, sharerName, streamId }) => {
+      console.log('🎬 화면 공유 시작 알림 수신:', sharerName, streamId);
+      this.remoteScreenInfo = { sharerSocketId, sharerName, streamId };
+      const peer = this.peers[sharerSocketId];
+      if (peer && peer.screenStream) {
+        this.currentRemoteScreenStream = peer.screenStream;
+        this.onRemoteScreenStream(sharerSocketId, sharerName, peer.screenStream);
+      }
+    });
+
+    // 🎬 화면 공유 종료 브로드캐스트 수신
+    this.socket.on('screen-share-stopped', ({ sharerSocketId }) => {
+      console.log('🎬 화면 공유 종료 알림 수신:', sharerSocketId);
+      this.remoteScreenInfo = null;
+      this.currentRemoteScreenStream = null;
+      const peer = this.peers[sharerSocketId];
+      if (peer) {
+        peer.screenStream = null;
+      }
+      this.onRemoteScreenStopped(sharerSocketId);
+    });
   }
 
   /**
@@ -188,6 +218,17 @@ class WebRTCManager {
       });
     }
 
+    // 로컬 화면 공유가 진행 중인 경우 해당 트랙들도 함께 추가
+    if (this.screenStream) {
+      if (!this.screenSenders[targetSocketId]) {
+        this.screenSenders[targetSocketId] = [];
+      }
+      this.screenStream.getTracks().forEach((track) => {
+        const sender = pc.addTrack(track, this.screenStream);
+        this.screenSenders[targetSocketId].push(sender);
+      });
+    }
+
     // ICE Candidate 이벤트 발생 시 시그널링 서버로 전송
     pc.onicecandidate = (event) => {
       if (event.candidate && this.socket) {
@@ -198,11 +239,29 @@ class WebRTCManager {
       }
     };
 
-    // 상대방의 미디어 스트림 수신 이벤트
+    // 상대방의 미디어 스트림 수신 이벤트 (카메라 vs 화면공유 분기)
     pc.ontrack = (event) => {
-      console.log('원격 스트림 수신 성공:', targetSocketId, event.streams[0]);
-      if (event.streams && event.streams[0]) {
-        this.onRemoteStream(targetSocketId, nickname, event.streams[0]);
+      const incomingStream = event.streams && event.streams[0];
+      if (!incomingStream) return;
+
+      console.log('미디어 트랙 수신:', targetSocketId, incomingStream.id, event.track.kind);
+
+      // 화면 공유 스트림 식별 로직:
+      // 1) remoteScreenInfo의 streamId와 일치하거나,
+      // 2) 이미 cameraStream을 등록받은 피어인데 추가 스트림이 온 경우 화면 공유 스트림으로 판별
+      const isScreen = (this.remoteScreenInfo && this.remoteScreenInfo.streamId === incomingStream.id) ||
+                       (peerInfo.cameraStream && peerInfo.cameraStream.id !== incomingStream.id);
+
+      if (isScreen) {
+        console.log('🎬 화면 공유 스트림 수신 성공:', targetSocketId, incomingStream);
+        peerInfo.screenStream = incomingStream;
+        this.currentRemoteScreenStream = incomingStream;
+        const sharerName = (this.remoteScreenInfo && this.remoteScreenInfo.sharerName) || nickname;
+        this.onRemoteScreenStream(targetSocketId, sharerName, incomingStream);
+      } else {
+        console.log('원격 카메라 스트림 수신 성공:', targetSocketId, incomingStream);
+        peerInfo.cameraStream = incomingStream;
+        this.onRemoteStream(targetSocketId, nickname, incomingStream);
       }
     };
 
@@ -257,9 +316,131 @@ class WebRTCManager {
   }
 
   /**
+   * 🎬 화면 및 시스템 오디오 공유(Watch Party) 시작
+   */
+  async startScreenShare() {
+    if (this.screenStream) return this.screenStream;
+
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: 'always',
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+
+      this.screenStream = displayStream;
+
+      // 브라우저 상단 "공유 중지" 버튼 클릭 시 자동 종료 이벤트 바인딩
+      const videoTrack = displayStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          this.stopScreenShare();
+        };
+      }
+
+      // 각 피어 커넥션에 화면 스트림 트랙 추가
+      for (const [targetSocketId, peer] of Object.entries(this.peers)) {
+        if (!this.screenSenders[targetSocketId]) {
+          this.screenSenders[targetSocketId] = [];
+        }
+        displayStream.getTracks().forEach((track) => {
+          try {
+            const sender = peer.peerConnection.addTrack(track, displayStream);
+            this.screenSenders[targetSocketId].push(sender);
+          } catch (e) {
+            console.warn(`트랙 추가 실패 (${targetSocketId}):`, e);
+          }
+        });
+      }
+
+      // 모든 피어와 SDP 재협상(Renegotiation)
+      await this.renegotiateAllPeers();
+
+      // 시그널링 서버로 화면 공유 시작 알림 브로드캐스트
+      if (this.socket && this.roomId) {
+        this.socket.emit('screen-share-start', {
+          roomId: this.roomId,
+          sharerName: this.nickname,
+          streamId: displayStream.id
+        });
+      }
+
+      console.log('🎬 화면 및 오디오 공유 시작 완료:', displayStream.id);
+      return displayStream;
+    } catch (err) {
+      console.warn('화면 공유 시작 취소 또는 실패:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * 🎬 화면 공유 중지
+   */
+  async stopScreenShare() {
+    if (!this.screenStream) return;
+
+    console.log('🎬 화면 공유 중지 처리 시작');
+
+    // 1. 모든 트랙 중지
+    this.screenStream.getTracks().forEach((track) => {
+      try { track.stop(); } catch (_) {}
+    });
+
+    // 2. 각 피어에서 sender 제거
+    for (const [targetSocketId, peer] of Object.entries(this.peers)) {
+      const senders = this.screenSenders[targetSocketId] || [];
+      senders.forEach((sender) => {
+        try {
+          peer.peerConnection.removeTrack(sender);
+        } catch (_) {}
+      });
+      delete this.screenSenders[targetSocketId];
+    }
+
+    this.screenStream = null;
+
+    // 3. 모든 피어와 SDP 재협상
+    await this.renegotiateAllPeers();
+
+    // 4. 시그널링 서버로 화면 공유 종료 알림 전송
+    if (this.socket && this.roomId) {
+      this.socket.emit('screen-share-stop', {
+        roomId: this.roomId
+      });
+    }
+  }
+
+  /**
+   * 모든 피어 커넥션과 SDP 재협상(Renegotiation Offer/Answer) 실행
+   */
+  async renegotiateAllPeers() {
+    for (const [targetSocketId, peer] of Object.entries(this.peers)) {
+      try {
+        const offer = await peer.peerConnection.createOffer();
+        await peer.peerConnection.setLocalDescription(offer);
+        if (this.socket) {
+          this.socket.emit('offer', {
+            targetSocketId,
+            sdp: offer
+          });
+        }
+      } catch (err) {
+        console.error(`피어(${targetSocketId}) 재협상 오류:`, err);
+      }
+    }
+  }
+
+  /**
    * 통화 종료 및 방 나가기
    */
   leaveRoom() {
+    this.stopScreenShare();
     for (const socketId of Object.keys(this.peers)) {
       this.closePeer(socketId);
     }

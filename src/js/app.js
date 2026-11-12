@@ -126,10 +126,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   const callToggleMicBtn = document.getElementById('callToggleMicBtn');
   const callToggleCamBtn = document.getElementById('callToggleCamBtn');
   const callToggleFlipBtn = document.getElementById('callToggleFlipBtn');
+  const callToggleScreenBtn = document.getElementById('callToggleScreenBtn');
   const leaveCallBtn = document.getElementById('leaveCallBtn');
   const toggleFilterDrawerBtn = document.getElementById('toggleFilterDrawerBtn');
   const inCallFilterDrawer = document.getElementById('inCallFilterDrawer');
   const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+
+  // 🎬 Watch Party & 화면 공유 관련 DOM
+  const screenShareTipModal = document.getElementById('screenShareTipModal');
+  const closeScreenTipModalBtn = document.getElementById('closeScreenTipModalBtn');
+  const cancelScreenShareBtn = document.getElementById('cancelScreenShareBtn');
+  const proceedScreenShareBtn = document.getElementById('proceedScreenShareBtn');
+  const dontShowScreenTipAgain = document.getElementById('dontShowScreenTipAgain');
+  const watchPartyBanner = document.getElementById('watchPartyBanner');
+  const watchPartyBannerText = document.getElementById('watchPartyBannerText');
+  const openPopoutBtn = document.getElementById('openPopoutBtn');
+  const closeWatchPartyBannerBtn = document.getElementById('closeWatchPartyBannerBtn');
+
+  // 활성 팝아웃 윈도우 인스턴스 및 스트림 데이터 캐시
+  let popoutWindow = null;
+  let activeWatchPartyData = null; // { stream, sharerName }
+  const SCREEN_TIP_STORAGE_KEY = 'beautycall_hide_screen_tip';
+
+  // 팝아웃 창과의 브릿지 함수 등록
+  window.getWatchPartyStream = () => activeWatchPartyData;
+  window.onPopoutClosed = () => { popoutWindow = null; };
 
   // 통화 중 필터 슬라이더
   const inCallEyelinerSlider = document.getElementById('inCallEyelinerSlider');
@@ -1162,6 +1183,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       onRemoteStream: (socketId, rNickname, stream) => {
         addRemoteVideo(socketId, rNickname, stream);
       },
+      onRemoteScreenStream: (socketId, sharerName, stream) => {
+        console.log(`🎬 원격 화면 공유 수신: ${sharerName} (${socketId})`);
+        activeWatchPartyData = { stream, sharerName };
+        if (watchPartyBanner) {
+          watchPartyBanner.classList.remove('hidden');
+          if (watchPartyBannerText) {
+            watchPartyBannerText.innerHTML = `🎬 <strong>${sharerName}</strong> is sharing screen & audio`;
+          }
+        }
+        openWatchPartyPopout();
+      },
+      onRemoteScreenStopped: (socketId) => {
+        console.log(`🎬 원격 화면 공유 종료: ${socketId}`);
+        activeWatchPartyData = null;
+        if (watchPartyBanner) watchPartyBanner.classList.add('hidden');
+        if (popoutWindow && !popoutWindow.closed && typeof popoutWindow.setStream === 'function') {
+          popoutWindow.setStream(null);
+        }
+      },
       onUserLeft: (socketId) => {
         removeRemoteVideo(socketId);
       },
@@ -1271,6 +1311,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       webrtcManager = null;
     }
 
+    // 🎬 화면 공유 상태 및 팝아웃 정리
+    if (callToggleScreenBtn) callToggleScreenBtn.classList.remove('sharing');
+    if (watchPartyBanner) watchPartyBanner.classList.add('hidden');
+    activeWatchPartyData = null;
+    if (popoutWindow && !popoutWindow.closed) {
+      try { popoutWindow.setStream(null); } catch (_) {}
+    }
+
     // 접속 로딩 및 대기 상태 UI 초기화
     setJoinLoadingState(false);
     if (connectingStatusOverlay) connectingStatusOverlay.classList.add('hidden');
@@ -1284,6 +1332,116 @@ document.addEventListener('DOMContentLoaded', async () => {
     callView.classList.remove('active');
     lobbyView.classList.add('active');
     inCallFilterDrawer.classList.add('hidden');
+  }
+
+  // 🎬 Watch Party 독립 팝아웃 창 열기 및 포커스
+  function openWatchPartyPopout() {
+    if (popoutWindow && !popoutWindow.closed) {
+      popoutWindow.focus();
+      if (activeWatchPartyData) {
+        try {
+          popoutWindow.setStream(activeWatchPartyData.stream, activeWatchPartyData.sharerName);
+        } catch (_) {}
+      }
+      return popoutWindow;
+    }
+
+    const width = 1000;
+    const height = 620;
+    const left = Math.max(0, Math.round((window.screen.width - width) / 2));
+    const top = Math.max(0, Math.round((window.screen.height - height) / 2));
+    popoutWindow = window.open('popout.html', 'WatchPartyPopout', `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no`);
+
+    if (popoutWindow && activeWatchPartyData) {
+      setTimeout(() => {
+        try {
+          if (popoutWindow && !popoutWindow.closed && typeof popoutWindow.setStream === 'function') {
+            popoutWindow.setStream(activeWatchPartyData.stream, activeWatchPartyData.sharerName);
+          }
+        } catch (_) {}
+      }, 500);
+    }
+    return popoutWindow;
+  }
+
+  // 🎬 실제 화면 공유 시작 처리
+  async function executeStartScreenShare() {
+    if (!webrtcManager) return;
+    try {
+      const displayStream = await webrtcManager.startScreenShare();
+      if (callToggleScreenBtn) callToggleScreenBtn.classList.add('sharing');
+      activeWatchPartyData = { stream: displayStream, sharerName: `${currentNickname} (You)` };
+
+      if (watchPartyBanner) {
+        watchPartyBanner.classList.remove('hidden');
+        if (watchPartyBannerText) {
+          watchPartyBannerText.innerHTML = `🎬 <strong>You</strong> are sharing screen & audio`;
+        }
+      }
+
+      openWatchPartyPopout();
+    } catch (err) {
+      console.warn('화면 공유 취소 또는 오류:', err);
+      if (callToggleScreenBtn) callToggleScreenBtn.classList.remove('sharing');
+    }
+  }
+
+  // 🎬 화면 공유 버튼 클릭 이벤트 바인딩
+  if (callToggleScreenBtn) {
+    callToggleScreenBtn.addEventListener('click', () => {
+      // 이미 화면 공유 중인 경우 -> 즉시 중지
+      if (webrtcManager && webrtcManager.screenStream) {
+        webrtcManager.stopScreenShare();
+        callToggleScreenBtn.classList.remove('sharing');
+        if (watchPartyBanner) watchPartyBanner.classList.add('hidden');
+        activeWatchPartyData = null;
+        if (popoutWindow && !popoutWindow.closed) {
+          try { popoutWindow.setStream(null); } catch (_) {}
+        }
+        return;
+      }
+
+      // 화면 공유 시작 시도 -> "다시 보지 않기" 체크 여부 확인
+      const hideTip = localStorage.getItem(SCREEN_TIP_STORAGE_KEY) === 'true';
+      if (hideTip) {
+        executeStartScreenShare();
+      } else {
+        if (screenShareTipModal) screenShareTipModal.classList.remove('hidden');
+      }
+    });
+  }
+
+  // 💡 하드웨어 가속 및 화면 공유 TIP 모달 내 버튼 이벤트
+  if (closeScreenTipModalBtn) {
+    closeScreenTipModalBtn.addEventListener('click', () => {
+      if (screenShareTipModal) screenShareTipModal.classList.add('hidden');
+    });
+  }
+  if (cancelScreenShareBtn) {
+    cancelScreenShareBtn.addEventListener('click', () => {
+      if (screenShareTipModal) screenShareTipModal.classList.add('hidden');
+    });
+  }
+  if (proceedScreenShareBtn) {
+    proceedScreenShareBtn.addEventListener('click', () => {
+      if (dontShowScreenTipAgain && dontShowScreenTipAgain.checked) {
+        localStorage.setItem(SCREEN_TIP_STORAGE_KEY, 'true');
+      }
+      if (screenShareTipModal) screenShareTipModal.classList.add('hidden');
+      executeStartScreenShare();
+    });
+  }
+
+  // 🎬 상단 Watch Party 알림 배너 버튼 이벤트
+  if (openPopoutBtn) {
+    openPopoutBtn.addEventListener('click', () => {
+      openWatchPartyPopout();
+    });
+  }
+  if (closeWatchPartyBannerBtn) {
+    closeWatchPartyBannerBtn.addEventListener('click', () => {
+      if (watchPartyBanner) watchPartyBanner.classList.add('hidden');
+    });
   }
 
   leaveCallBtn.addEventListener('click', leaveRoom);
