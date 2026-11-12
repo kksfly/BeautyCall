@@ -30,7 +30,7 @@ const FILTERS_CONFIG = {
       name: '✨ K-Beauty',
       settings: {
         smoothing: 80, brightness: 114, contrast: 100, saturation: 104,
-        rosyTint: 20, eyeBrighten: 35, blush: 35, lipTint: 45, eyeliner: 0, highlighter: 30
+        rosyTint: 20, eyeBrighten: 35, blush: 35, lipTint: 45, eyeliner: 0, highlighter: 0
       }
     },
     {

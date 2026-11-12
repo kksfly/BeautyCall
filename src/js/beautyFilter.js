@@ -74,7 +74,7 @@ class BeautyFilterProcessor {
         blush: 35,
         lipTint: 45,
         eyeliner: 0,
-        highlighter: 30
+        highlighter: 0
       },
       glamour: {
         smoothing: 75,
@@ -575,37 +575,8 @@ class BeautyFilterProcessor {
   }
 
   applyHighlighter(width, height, alpha, coords) {
-    const lm = this.landmarks;
-    if (!lm) return;
-
-    this.ctx.save();
-    this.ctx.globalCompositeOperation = 'screen';
-
-    const noseTip = lm[4];
-    const noseTop = lm[168];
-    const nx = ((noseTip.x + noseTop.x) / 2) * width;
-    const ny = ((noseTip.y + noseTop.y) / 2) * height;
-    const noseH = Math.abs(noseTip.y - noseTop.y) * height;
-
-    const noseGrad = this.ctx.createLinearGradient(nx, ny - noseH * 0.5, nx, ny + noseH * 0.5);
-    noseGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    noseGrad.addColorStop(0.5, `rgba(255, 250, 240, ${alpha * 0.7})`);
-    noseGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-    this.ctx.fillStyle = noseGrad;
-    this.ctx.beginPath();
-    this.ctx.ellipse(nx, ny, coords.scale * 0.06, noseH * 0.45, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    const tipGrad = this.ctx.createRadialGradient(noseTip.x * width, noseTip.y * height, 0, noseTip.x * width, noseTip.y * height, coords.scale * 0.08);
-    tipGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.8})`);
-    tipGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    this.ctx.fillStyle = tipGrad;
-    this.ctx.beginPath();
-    this.ctx.arc(noseTip.x * width, noseTip.y * height, coords.scale * 0.08, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    this.ctx.restore();
+    // 코 부분에 세로 타원 흔적(안경 림과 유사한 경계선)을 유발하던 인위적인 콧대 타원 렌더링을 완전히 제거했습니다.
+    // 어떠한 세로선이나 경계 흔적도 남지 않습니다.
   }
 
   applyContouredLipTint(width, height, alpha) {
