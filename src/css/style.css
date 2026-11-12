@@ -238,6 +238,21 @@ body {
   flex-direction: column;
   gap: 20px;
   box-shadow: var(--shadow);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* 방 입장 폼 (미리보기 아래 배치) */
+.preview-card .join-form-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--card-border);
+  padding-top: 16px;
+}
+
+.room-inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .panel-section h3 {

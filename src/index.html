@@ -66,9 +66,29 @@
               <!-- SVG 좌우 반전 아이콘 -->
             </button>
           </div>
+
+          <!-- 🚪 Room Details (미리보기 화면 아래 고정 배치) -->
+          <div class="panel-section join-form-section">
+            <h3>🚪 Room Details</h3>
+            <div class="room-inputs-row">
+              <div class="input-row">
+                <label for="nicknameInput">Nickname</label>
+                <input type="text" id="nicknameInput" placeholder="Enter your name" value="User">
+              </div>
+              <div class="input-row">
+                <label for="roomIdInput">Room ID</label>
+                <input type="text" id="roomIdInput" placeholder="e.g. room-101" value="room-101">
+              </div>
+            </div>
+
+            <button id="joinCallBtn" class="join-primary-btn">
+              <span>Join Video Call</span>
+              <span class="btn-arrow">➔</span>
+            </button>
+          </div>
         </div>
 
-        <!-- 우측: 필터 및 입장 설정 패널 -->
+        <!-- 우측: 필터 전용 패널 -->
         <div class="settings-panel">
           <div class="panel-section">
             <!-- 필터 카테고리 탭 버튼 -->
@@ -152,24 +172,6 @@
               </div>
               <input type="range" id="brightnessSlider" min="80" max="140" value="112">
             </div>
-          </div>
-
-          <!-- 통화 입장 폼 -->
-          <div class="panel-section join-form-section">
-            <h3>🚪 Room Details</h3>
-            <div class="input-row">
-              <label for="nicknameInput">Nickname</label>
-              <input type="text" id="nicknameInput" placeholder="Enter your name" value="User">
-            </div>
-            <div class="input-row">
-              <label for="roomIdInput">Room ID</label>
-              <input type="text" id="roomIdInput" placeholder="e.g. room-101" value="room-101">
-            </div>
-
-            <button id="joinCallBtn" class="join-primary-btn">
-              <span>Join Video Call</span>
-              <span class="btn-arrow">➔</span>
-            </button>
           </div>
         </div>
       </div>
