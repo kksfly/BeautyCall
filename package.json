@@ -1,0 +1,29 @@
+{
+  "name": "video_call_app",
+  "version": "1.0.0",
+  "description": "다자간 화상 통화 및 뷰티 필터 데스크톱 앱",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server/signaling.js",
+    "dev": "concurrently \"node server/signaling.js\" \"electron .\""
+  },
+  "keywords": [
+    "webrtc",
+    "electron",
+    "video-call",
+    "beauty-filter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/face_mesh": "^0.4.1633559619",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "electron": "^34.2.0"
+  }
+}

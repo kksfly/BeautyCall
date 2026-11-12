@@ -1,0 +1,623 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+:root {
+  --bg-primary: #12141a;
+  --bg-secondary: #1a1e27;
+  --bg-tertiary: #252b38;
+  --text-main: #f0f3f8;
+  --text-muted: #8e9aae;
+  --accent-pink: #ff5e8a;
+  --accent-gradient: linear-gradient(135deg, #ff5e8a 0%, #ff8ea3 100%);
+  --accent-blue: #3b82f6;
+  --accent-danger: #ef4444;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* 뷰(화면) 전환 제어 */
+.view {
+  display: none;
+  height: 100vh;
+  width: 100vw;
+}
+
+.view.active {
+  display: flex;
+}
+
+/* ================= 대기실 (Lobby) 스타일 ================= */
+#lobbyView {
+  flex-direction: column;
+  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.lobby-container {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-header {
+  text-align: center;
+}
+
+.app-header .logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.app-header .logo-icon {
+  font-size: 32px;
+}
+
+.app-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.app-header .subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.lobby-content {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+/* 프리뷰 카드 */
+.preview-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-color: #0b0c10;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-wrapper canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.video-wrapper canvas.mirrored,
+.local-card canvas.mirrored {
+  transform: scaleX(-1); /* 좌우 반전 (거울 모드 ON) */
+}
+
+.video-wrapper canvas.unmirrored,
+.local-card canvas.unmirrored {
+  transform: scaleX(1); /* 일반 모드 (거울 모드 OFF) */
+}
+
+.preview-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #ff8ea3;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.camera-off-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #1a1e27;
+  color: var(--text-muted);
+  gap: 12px;
+}
+
+.camera-off-placeholder .placeholder-icon {
+  width: 48px;
+  height: 48px;
+  stroke: var(--text-muted);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.media-quick-toggles {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.action-circle-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background-color: var(--bg-tertiary);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.action-circle-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: #f0f3f8;
+  display: block;
+}
+
+.action-circle-btn.active {
+  background-color: #2b3345;
+}
+
+.action-circle-btn.off {
+  background-color: var(--accent-danger);
+  border-color: transparent;
+}
+
+.action-circle-btn.off svg {
+  stroke: #fff;
+}
+
+/* 좌우 반전 버튼 상태 스타일 */
+#toggleFlipBtn.off,
+#callToggleFlipBtn.off {
+  background-color: #161922;
+  border-color: var(--card-border);
+  opacity: 0.6;
+}
+
+#toggleFlipBtn.active,
+#callToggleFlipBtn.active {
+  background-color: #2b3345;
+  border-color: rgba(255, 94, 138, 0.4);
+  opacity: 1;
+}
+
+.action-circle-btn:hover {
+  transform: scale(1.06);
+}
+
+/* 우측 설정 패널 */
+.settings-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow);
+}
+
+.panel-section h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-main);
+}
+
+/* 프리셋 버튼 */
+.preset-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.preset-btn {
+  padding: 10px 8px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.preset-btn:hover {
+  background-color: #2e3748;
+  color: #fff;
+}
+
+.preset-btn.active {
+  background: var(--accent-gradient);
+  color: #fff;
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 94, 138, 0.35);
+}
+
+/* 슬라이더 */
+.slider-group {
+  margin-bottom: 12px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-pink);
+  height: 5px;
+  border-radius: 5px;
+  outline: none;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+}
+
+/* 방 입장 폼 */
+.input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.input-row label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.input-row input {
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-row input:focus {
+  border-color: var(--accent-pink);
+}
+
+.join-primary-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent-gradient);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  box-shadow: 0 6px 18px rgba(255, 94, 138, 0.4);
+  transition: all 0.2s;
+}
+
+.join-primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(255, 94, 138, 0.5);
+}
+
+/* ================= [2. 통화 방 화면 (Call View)] ================= */
+#callView {
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+.call-header {
+  height: 60px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--card-border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.call-room-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.call-room-info h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.badge {
+  background-color: var(--bg-tertiary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--accent-pink);
+  font-weight: 600;
+}
+
+.header-tool-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.header-tool-btn:hover {
+  background-color: #2f3849;
+}
+
+/* 다자간 비디오 그리드 */
+.video-grid-container {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.video-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 인원수에 따른 반응형 그리드 */
+.video-grid.count-1 {
+  grid-template-columns: minmax(300px, 900px);
+  grid-template-rows: 1fr;
+}
+
+.video-grid.count-2 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.video-grid.count-3,
+.video-grid.count-4 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.video-card {
+  position: relative;
+  background-color: #0b0c10;
+  border-radius: 16px;
+  overflow: hidden;
+  height: 100%;
+  max-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow);
+}
+
+.video-card canvas,
+.video-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.user-meta {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.filter-indicator {
+  color: #ff8ea3;
+  font-size: 11px;
+}
+
+/* 하단 툴바 */
+.call-toolbar {
+  height: 76px;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.control-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background-color: var(--bg-tertiary);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.control-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: #f0f3f8;
+  display: block;
+}
+
+.control-btn.active {
+  background-color: #2c3445;
+}
+
+.control-btn.off {
+  background-color: var(--accent-danger);
+  border-color: transparent;
+}
+
+.control-btn.off svg {
+  stroke: #fff;
+}
+
+.control-btn.leave-btn {
+  background-color: var(--accent-danger);
+  border-color: transparent;
+}
+
+.control-btn.leave-btn svg {
+  stroke: #fff;
+}
+
+.control-btn.leave-btn:hover {
+  background-color: #dc2626;
+  transform: scale(1.08);
+}
+
+.control-btn:hover {
+  transform: scale(1.06);
+}
+
+.toolbar-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 9px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.toolbar-btn svg {
+  stroke: var(--accent-pink);
+}
+
+.toolbar-btn:hover {
+  background-color: #2f3849;
+}
+
+/* 통화 중 필터 조절 드로어 */
+.filter-drawer {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  width: 320px;
+  background: rgba(26, 30, 39, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.drawer-header h4 {
+  font-size: 14px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.preset-buttons.small {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.preset-buttons.small .preset-btn {
+  padding: 6px 4px;
+  font-size: 11px;
+}
