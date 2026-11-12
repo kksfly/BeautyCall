@@ -147,11 +147,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     ? window.location.origin
     : 'https://beautycall-server.onrender.com';
 
-  // 로컬 스토리지 키
+  // 로컬 & 세션 스토리지 키
   const FILTER_STORAGE_KEY = 'beautycall_filter_settings';
   const AUTH_STORAGE_KEY = 'beautycall_access_key';
   const NICKNAME_STORAGE_KEY = 'beautycall_user_nickname';
   const ROOM_STORAGE_KEY = 'beautycall_user_room_id';
+  const ACTIVE_CALL_SESSION_KEY = 'beautycall_active_call_session';
 
   // 현재 인증 키
   let currentAccessKey = localStorage.getItem(AUTH_STORAGE_KEY) || '';
@@ -491,6 +492,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 서비스 초기화 진행
         loadRemoteFilters();
         initLobbySocket();
+        tryAutoRejoinCall();
         return true;
       } else if (data.blocked) {
         // 5회 이상 실패로 24시간 차단 상태
@@ -658,6 +660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 뷰티 필터 엔진 시작
     filterProcessor.start(rawVideo);
     startSyncPreviewLoop();
+    tryAutoRejoinCall();
   } catch (err) {
     console.error('카메라/마이크 접근 권한 실패:', err);
     alert('Unable to access camera or microphone. Please check your permissions.');
@@ -870,14 +873,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     userCountBadge.textContent = `Participants: ${totalUsers}/4`;
   }
 
-  // 6. 화상 통화 방 입장
-  joinCallBtn.addEventListener('click', () => {
-    currentNickname = nicknameInput.value.trim() || 'User';
-    currentRoomId = roomIdInput.value.trim() || 'room-101';
+  // 6. 화상 통화 방 입장 실행 함수 (수동 입장 및 F5 새로고침 자동 복원 공통)
+  function executeJoinRoom(roomId, nickname) {
+    if (!roomId) roomId = roomIdInput.value.trim() || 'room-101';
+    if (!nickname) nickname = nicknameInput.value.trim() || 'User';
 
-    // 💾 마지막 사용한 닉네임과 방 번호 영구 저장
+    currentRoomId = roomId;
+    currentNickname = nickname;
+
+    // 💾 마지막 사용한 닉네임과 방 번호 영구 저장 (localStorage)
     localStorage.setItem(NICKNAME_STORAGE_KEY, currentNickname);
     localStorage.setItem(ROOM_STORAGE_KEY, currentRoomId);
+
+    // 🔄 F5 새로고침 시 참여 중인 방 유지를 위한 활성 세션 저장 (sessionStorage)
+    sessionStorage.setItem(ACTIVE_CALL_SESSION_KEY, JSON.stringify({
+      roomId: currentRoomId,
+      nickname: currentNickname
+    }));
 
     // 뷰티 & 메이크업 필터가 적용된 Canvas에서 실시간 비디오 스트림 추출
     const filteredVideoStream = filterProcessor.getFilteredStream(30);
@@ -892,12 +904,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       combinedStream.addTrack(rawStream.getAudioTracks()[0]);
     }
 
+    // 기존 연결 인스턴스가 있다면 먼저 정리
+    if (webrtcManager) {
+      webrtcManager.leaveRoom();
+      webrtcManager = null;
+    }
+
     // WebRTC 연결 관리자 초기화 (Render 클라우드 시그널링 서버 및 보안 키 연동)
     webrtcManager = new WebRTCManager({
       socketUrl: SIGNALING_URL,
       authKey: currentAccessKey,
-      onRemoteStream: (socketId, nickname, stream) => {
-        addRemoteVideo(socketId, nickname, stream);
+      onRemoteStream: (socketId, rNickname, stream) => {
+        addRemoteVideo(socketId, rNickname, stream);
       },
       onUserLeft: (socketId) => {
         removeRemoteVideo(socketId);
@@ -918,7 +936,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     callView.classList.add('active');
 
     updateGridLayout();
+    console.log(`🚀 [통화 방 입장 완료] Room: ${currentRoomId}, Nickname: ${currentNickname}`);
+  }
+
+  joinCallBtn.addEventListener('click', () => {
+    const nick = nicknameInput.value.trim() || 'User';
+    const room = roomIdInput.value.trim() || 'room-101';
+    executeJoinRoom(room, nick);
   });
+
+  // 🔄 F5 새로고침 감지 시 참여 중이던 방으로 자동 재접속(Auto Re-join) 함수
+  let hasAutoRejoined = false;
+  function tryAutoRejoinCall() {
+    if (hasAutoRejoined) return;
+    if (!rawStream || !filterProcessor.isRunning) return;
+    if (!currentAccessKey) return;
+
+    try {
+      const savedCallData = sessionStorage.getItem(ACTIVE_CALL_SESSION_KEY);
+      if (savedCallData) {
+        const { roomId, nickname } = JSON.parse(savedCallData);
+        if (roomId && nickname) {
+          hasAutoRejoined = true;
+          console.log(`🔄 F5 새로고침 감지: 참여 중이던 방(${roomId})으로 자동 복귀합니다.`);
+          executeJoinRoom(roomId, nickname);
+        }
+      }
+    } catch (e) {
+      console.warn('자동 재참여 복원 실패:', e);
+    }
+  }
 
   // 상대방 비디오 타일 동적 추가
   function addRemoteVideo(socketId, nickname, stream) {
@@ -961,6 +1008,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 통화 종료 / 나가기
   function leaveRoom() {
+    // 🚪 통화 종료 시 활성 세션 정보 제거 (새로고침 시 대기실로 시작)
+    sessionStorage.removeItem(ACTIVE_CALL_SESSION_KEY);
+
     if (webrtcManager) {
       webrtcManager.leaveRoom();
       webrtcManager = null;
