@@ -1,11 +1,7 @@
 /**
  * 실시간 뷰티 및 메이크업 필터 프로세서
- * - 'The Best Makeup' Facebook Messenger 스타일 AR 메이크업 마스크 지원:
- *   1. 정밀 아이라인 & 속눈썹 라인 (Winged Eyeliner)
- *   2. 입술 윤곽 밀착 3D 벨벳 틴트 (Contoured Lip Tint)
- *   3. 콧대 & 광대뼈 입체 하이라이터 (3D Strobing / Highlighter)
- *   4. 사랑스러운 피치 코랄 치크 블러셔 (Cheek Blush)
- *   5. 얼굴 전용 도자기 피부 리터칭 (Flawless Face Retouching)
+ * - Basic Filters (기본 뷰티 & 색감)
+ * - Special Filters (Facebook Messenger 스타일 The Best Makeup 등 고급 AR 마스크)
  */
 class BeautyFilterProcessor {
   constructor() {
@@ -13,36 +9,34 @@ class BeautyFilterProcessor {
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: false });
     
-    // 피부 보정 보조 캔버스
     this.blurCanvas = document.createElement('canvas');
     this.blurCtx = this.blurCanvas.getContext('2d');
 
-    // 얼굴 마스크 캔버스
     this.maskCanvas = document.createElement('canvas');
     this.maskCtx = this.maskCanvas.getContext('2d');
 
     this.animationFrameId = null;
     this.isRunning = false;
 
-    // 필터 기본 설정값
+    // 현재 설정값
     this.settings = {
+      category: 'special',  // 'basic' | 'special'
       preset: 'bestMakeup',
-      smoothing: 75,        // 0 ~ 100 (피부 매끈함)
-      brightness: 110,      // 70 ~ 140 (%)
-      contrast: 103,        // 80 ~ 130 (%)
-      saturation: 108,      // 70 ~ 140 (%)
-      rosyTint: 15,         // 0 ~ 100 (전체 핑크 생기)
+      smoothing: 78,
+      brightness: 112,
+      contrast: 104,
+      saturation: 110,
+      rosyTint: 15,
       vignette: false,
-      // 메이크업 세부 기능
-      eyeBrighten: 40,      // 0 ~ 100 (눈가 맑은 톤업)
-      blush: 55,            // 0 ~ 100 (양 볼 블러셔)
-      lipTint: 65,          // 0 ~ 100 (입술 틴트)
-      eyeliner: 60,         // 0 ~ 100 (소프트 윙 아이라인)
-      highlighter: 50       // 0 ~ 100 (콧대/광대 하이라이터)
+      eyeBrighten: 45,
+      blush: 55,
+      lipTint: 70,
+      eyeliner: 65,
+      highlighter: 55
     };
 
-    // 프리셋 정의
-    this.presets = {
+    // 1. Basic Filters (기본 필터)
+    this.basicPresets = {
       none: {
         smoothing: 0,
         brightness: 100,
@@ -55,45 +49,6 @@ class BeautyFilterProcessor {
         lipTint: 0,
         eyeliner: 0,
         highlighter: 0
-      },
-      bestMakeup: {
-        smoothing: 78,      // 무결점 도자기 피부
-        brightness: 112,
-        contrast: 104,
-        saturation: 110,
-        rosyTint: 15,
-        vignette: false,
-        eyeBrighten: 45,
-        blush: 55,          // 화사한 피치 블러셔
-        lipTint: 70,        // 매혹적인 벨벳 로즈 립
-        eyeliner: 65,       // 또렷하고 그윽한 윙 아이라인
-        highlighter: 55     // 입체적인 콧대/광대 하이라이터
-      },
-      glamour: {
-        smoothing: 70,
-        brightness: 110,
-        contrast: 102,
-        saturation: 108,
-        rosyTint: 15,
-        vignette: false,
-        eyeBrighten: 40,
-        blush: 50,
-        lipTint: 60,
-        eyeliner: 40,
-        highlighter: 30
-      },
-      kbeauty: {
-        smoothing: 80,
-        brightness: 114,
-        contrast: 100,
-        saturation: 104,
-        rosyTint: 20,
-        vignette: false,
-        eyeBrighten: 35,
-        blush: 35,
-        lipTint: 45,
-        eyeliner: 25,
-        highlighter: 40
       },
       smooth: {
         smoothing: 70,
@@ -108,6 +63,32 @@ class BeautyFilterProcessor {
         eyeliner: 0,
         highlighter: 0
       },
+      kbeauty: {
+        smoothing: 80,
+        brightness: 114,
+        contrast: 100,
+        saturation: 104,
+        rosyTint: 20,
+        vignette: false,
+        eyeBrighten: 35,
+        blush: 35,
+        lipTint: 45,
+        eyeliner: 0,
+        highlighter: 30
+      },
+      glamour: {
+        smoothing: 75,
+        brightness: 112,
+        contrast: 104,
+        saturation: 110,
+        rosyTint: 15,
+        vignette: false,
+        eyeBrighten: 40,
+        blush: 50,
+        lipTint: 60,
+        eyeliner: 0,
+        highlighter: 0
+      },
       warm: {
         smoothing: 50,
         brightness: 106,
@@ -115,11 +96,11 @@ class BeautyFilterProcessor {
         saturation: 115,
         rosyTint: 30,
         vignette: false,
-        eyeBrighten: 20,
-        blush: 30,
-        lipTint: 30,
-        eyeliner: 30,
-        highlighter: 30
+        eyeBrighten: 0,
+        blush: 25,
+        lipTint: 25,
+        eyeliner: 0,
+        highlighter: 0
       },
       cool: {
         smoothing: 70,
@@ -128,11 +109,11 @@ class BeautyFilterProcessor {
         saturation: 98,
         rosyTint: 15,
         vignette: false,
-        eyeBrighten: 20,
-        blush: 25,
-        lipTint: 35,
-        eyeliner: 30,
-        highlighter: 40
+        eyeBrighten: 0,
+        blush: 20,
+        lipTint: 30,
+        eyeliner: 0,
+        highlighter: 0
       },
       vintage: {
         smoothing: 40,
@@ -162,25 +143,74 @@ class BeautyFilterProcessor {
       }
     };
 
-    // 랜드마크 인덱스 정의
+    // 2. Special Filters (스페셜 AR 메이크업 마스크)
+    this.specialPresets = {
+      bestMakeup: {
+        smoothing: 78,      // 무결점 도자기 피부
+        brightness: 112,
+        contrast: 104,
+        saturation: 110,
+        rosyTint: 15,
+        vignette: false,
+        eyeBrighten: 45,
+        blush: 55,          // 화사한 피치 블러셔
+        lipTint: 70,        // 매혹적인 벨벳 로즈 립
+        eyeliner: 65,       // 그윽한 소프트 윙 아이라인
+        highlighter: 55     // 3D 콧대/광대 윤광 하이라이터
+      },
+      idolMask: {
+        smoothing: 82,      // 투명하고 깨끗한 아이돌 무대 피부
+        brightness: 116,
+        contrast: 102,
+        saturation: 106,
+        rosyTint: 20,
+        vignette: false,
+        eyeBrighten: 50,
+        blush: 45,          // 러블리 핑크 치크
+        lipTint: 60,        // 촉촉한 코랄 핑크 립
+        eyeliner: 40,       // 자연스러운 속눈썹 라인
+        highlighter: 60     // 화사한 샴페인 스트로빙
+      },
+      foxEyes: {
+        smoothing: 72,
+        brightness: 108,
+        contrast: 106,
+        saturation: 108,
+        rosyTint: 10,
+        vignette: false,
+        eyeBrighten: 35,
+        blush: 40,
+        lipTint: 65,
+        eyeliner: 80,       // 날렵하고 섹시한 캣츠아이 윙
+        highlighter: 45
+      },
+      goldenHour: {
+        smoothing: 65,
+        brightness: 110,
+        contrast: 105,
+        saturation: 118,
+        rosyTint: 35,       // 노을빛 따스한 엠버 틴트
+        vignette: false,
+        eyeBrighten: 30,
+        blush: 60,          // 웜 골드 브론징 블러셔
+        lipTint: 60,        // 누드 로즈 립
+        eyeliner: 45,
+        highlighter: 65     // 골든 하이라이트
+      }
+    };
+
+    // 랜드마크 인덱스
     this.faceOvalIndices = [
       10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
       397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
       172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
     ];
-
-    // 왼쪽/오른쪽 눈 윗라인 (아이라인용)
     this.leftEyeTopIndices = [33, 246, 161, 160, 159, 158, 157, 173, 133];
     this.rightEyeTopIndices = [263, 466, 388, 387, 386, 385, 384, 398, 362];
-
-    // 입술 외곽선 (정밀 립 틴트용)
     this.outerLipIndices = [
       61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291,
       375, 321, 405, 314, 17, 84, 181, 91, 146
     ];
-
-    // 콧대 (하이라이터용)
-    this.noseBridgeIndices = [168, 6, 197, 195, 5];
 
     this.faceMesh = null;
     this.landmarks = null;
@@ -299,9 +329,14 @@ class BeautyFilterProcessor {
   }
 
   setPreset(presetName) {
-    if (this.presets[presetName]) {
+    if (this.specialPresets[presetName]) {
+      this.settings.category = 'special';
       this.settings.preset = presetName;
-      Object.assign(this.settings, this.presets[presetName]);
+      Object.assign(this.settings, this.specialPresets[presetName]);
+    } else if (this.basicPresets[presetName]) {
+      this.settings.category = 'basic';
+      this.settings.preset = presetName;
+      Object.assign(this.settings, this.basicPresets[presetName]);
     }
   }
 
@@ -351,52 +386,45 @@ class BeautyFilterProcessor {
       vignette, eyeBrighten, blush, lipTint, eyeliner, highlighter
     } = this.settings;
 
-    // 1. 기본 색상 보정 필터
     const filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
 
-    // 메인 화면에 선명한 원본 영상 렌더링 (배경, 옷, 머리카락 100% 선명도 유지)
+    // 메인 선명한 원본 영상 렌더링
     this.ctx.filter = filterString;
     this.ctx.drawImage(this.videoElement, 0, 0, width, height);
     this.ctx.filter = 'none';
 
     const coords = this.getFaceCoordinates(width, height);
 
-    // 2. 얼굴 영역 전용 피부 스무딩 (도자기 피부)
+    // 얼굴 전용 피부 스무딩
     if (smoothing > 0 && coords && this.landmarks) {
       this.applyFaceOnlySmoothing(width, height, filterString, smoothing, coords);
     }
 
-    // 3. 'The Best Makeup' AR 마스크 효과 (얼굴 인식 시 정밀 렌더링)
+    // AR 메이크업 효과
     if (coords && this.landmarks) {
-      // 3-1. 콧대 & 광대뼈 3D 하이라이터 (Strobing)
       if (highlighter > 0) {
         this.applyHighlighter(width, height, (highlighter / 100) * 0.45, coords);
       }
 
-      // 3-2. 치크 블러셔 (사랑스러운 피치 핑크)
       if (blush > 0) {
         this.applyCheekBlush(coords.leftCheek, (blush / 100) * 0.35);
         this.applyCheekBlush(coords.rightCheek, (blush / 100) * 0.35);
       }
 
-      // 3-3. 소프트 윙 아이라인 & 속눈썹 라인
       if (eyeliner > 0) {
         this.applyEyeliner(width, height, (eyeliner / 100) * 0.65, coords.scale);
       }
 
-      // 3-4. 눈가 브라이트닝
       if (eyeBrighten > 0) {
         this.applyEyeBrightening(coords.leftEye, (eyeBrighten / 100) * 0.22);
         this.applyEyeBrightening(coords.rightEye, (eyeBrighten / 100) * 0.22);
       }
 
-      // 3-5. 정밀 3D 벨벳 립 틴트 (입술 윤곽 밀착)
       if (lipTint > 0) {
         this.applyContouredLipTint(width, height, (lipTint / 100) * 0.45);
       }
     }
 
-    // 4. 전체 핑크 생기 틴트
     if (rosyTint > 0) {
       this.ctx.save();
       this.ctx.globalCompositeOperation = 'soft-light';
@@ -405,7 +433,6 @@ class BeautyFilterProcessor {
       this.ctx.restore();
     }
 
-    // 5. 비네팅
     if (vignette) {
       this.ctx.save();
       const gradient = this.ctx.createRadialGradient(
@@ -420,9 +447,6 @@ class BeautyFilterProcessor {
     }
   }
 
-  /**
-   * 얼굴 피부 영역 전용 스킨 스무딩 (눈/입술 선명도 보존)
-   */
   applyFaceOnlySmoothing(width, height, filterString, smoothing, coords) {
     const blurRadius = Math.max(2, Math.round((smoothing / 100) * 9));
     this.blurCtx.clearRect(0, 0, width, height);
@@ -447,7 +471,6 @@ class BeautyFilterProcessor {
     this.maskCtx.closePath();
     this.maskCtx.fill();
 
-    // 눈과 입술 구멍 제외 (선명도 유지)
     this.maskCtx.filter = 'blur(6px)';
     this.maskCtx.globalCompositeOperation = 'destination-out';
 
@@ -480,9 +503,6 @@ class BeautyFilterProcessor {
     this.ctx.restore();
   }
 
-  /**
-   * 소프트 윙 아이라인 & 속눈썹 라인 렌더링 (Facebook Messenger 스타일)
-   */
   applyEyeliner(width, height, alpha, faceScale) {
     const lm = this.landmarks;
     if (!lm) return;
@@ -493,7 +513,7 @@ class BeautyFilterProcessor {
     this.ctx.strokeStyle = `rgba(28, 22, 25, ${alpha})`;
     this.ctx.lineWidth = Math.max(1.8, faceScale * 0.038);
 
-    // 1. 왼쪽 눈 아이라인
+    // 왼쪽 눈
     this.ctx.beginPath();
     for (let i = 0; i < this.leftEyeTopIndices.length; i++) {
       const idx = this.leftEyeTopIndices[i];
@@ -502,7 +522,6 @@ class BeautyFilterProcessor {
       if (i === 0) this.ctx.moveTo(px, py);
       else this.ctx.lineTo(px, py);
     }
-    // 왼쪽 눈꼬리 살짝 올린 윙 (Wing)
     const leftEnd = lm[133];
     const leftPrev = lm[173];
     const leftWingX = (leftEnd.x + (leftEnd.x - leftPrev.x) * 0.8) * width;
@@ -510,7 +529,7 @@ class BeautyFilterProcessor {
     this.ctx.lineTo(leftWingX, leftWingY);
     this.ctx.stroke();
 
-    // 2. 오른쪽 눈 아이라인
+    // 오른쪽 눈
     this.ctx.beginPath();
     for (let i = 0; i < this.rightEyeTopIndices.length; i++) {
       const idx = this.rightEyeTopIndices[i];
@@ -519,7 +538,6 @@ class BeautyFilterProcessor {
       if (i === 0) this.ctx.moveTo(px, py);
       else this.ctx.lineTo(px, py);
     }
-    // 오른쪽 눈꼬리 윙
     const rightEnd = lm[362];
     const rightPrev = lm[398];
     const rightWingX = (rightEnd.x + (rightEnd.x - rightPrev.x) * 0.8) * width;
@@ -530,9 +548,6 @@ class BeautyFilterProcessor {
     this.ctx.restore();
   }
 
-  /**
-   * 콧대 & 광대 3D 하이라이터 (입체감과 윤광 부여)
-   */
   applyHighlighter(width, height, alpha, coords) {
     const lm = this.landmarks;
     if (!lm) return;
@@ -540,7 +555,6 @@ class BeautyFilterProcessor {
     this.ctx.save();
     this.ctx.globalCompositeOperation = 'screen';
 
-    // 콧대 하이라이트 (라인을 따라 빛나는 윤광)
     const noseTip = lm[4];
     const noseTop = lm[168];
     const nx = ((noseTip.x + noseTop.x) / 2) * width;
@@ -557,7 +571,6 @@ class BeautyFilterProcessor {
     this.ctx.ellipse(nx, ny, coords.scale * 0.06, noseH * 0.45, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 콧망울 끝 은은한 포인트 하이라이트
     const tipGrad = this.ctx.createRadialGradient(noseTip.x * width, noseTip.y * height, 0, noseTip.x * width, noseTip.y * height, coords.scale * 0.08);
     tipGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.8})`);
     tipGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
@@ -569,9 +582,6 @@ class BeautyFilterProcessor {
     this.ctx.restore();
   }
 
-  /**
-   * 입술 윤곽 랜드마크에 딱 맞춘 정밀 3D 벨벳 틴트
-   */
   applyContouredLipTint(width, height, alpha) {
     const lm = this.landmarks;
     if (!lm) return;
@@ -579,7 +589,6 @@ class BeautyFilterProcessor {
     this.ctx.save();
     this.ctx.globalCompositeOperation = 'soft-light';
 
-    // 1. 입술 윤곽 패스 따기
     this.ctx.beginPath();
     for (let i = 0; i < this.outerLipIndices.length; i++) {
       const idx = this.outerLipIndices[i];
@@ -590,11 +599,9 @@ class BeautyFilterProcessor {
     }
     this.ctx.closePath();
 
-    // 2. 매력적인 로즈 벨벳 립 틴트 컬러 적용
     this.ctx.fillStyle = `rgba(230, 40, 80, ${alpha * 1.3})`;
     this.ctx.fill();
 
-    // 3. 입술 안쪽 그라데이션 (Ombre/Vibrant Center)
     const centerLip = lm[13];
     const centerGrad = this.ctx.createRadialGradient(
       centerLip.x * width, centerLip.y * height, 0,
@@ -634,7 +641,6 @@ class BeautyFilterProcessor {
     this.ctx.save();
     this.ctx.globalCompositeOperation = 'soft-light';
 
-    // 피치 코랄 톤의 화사한 치크
     const grad = this.ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
     grad.addColorStop(0, `rgba(255, 120, 140, ${alpha * 1.2})`);
     grad.addColorStop(0.5, `rgba(255, 140, 160, ${alpha * 0.6})`);

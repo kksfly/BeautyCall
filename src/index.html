@@ -71,16 +71,30 @@
         <!-- 우측: 필터 및 입장 설정 패널 -->
         <div class="settings-panel">
           <div class="panel-section">
-            <h3>🎨 Filter & Makeup Presets</h3>
-            <div class="preset-buttons">
-              <button class="preset-btn active" data-preset="bestMakeup">👑 Best Makeup</button>
+            <!-- 필터 카테고리 탭 버튼 -->
+            <div class="category-tabs">
+              <button class="category-tab-btn" data-category="basic">🎨 Basic Filters</button>
+              <button class="category-tab-btn active" data-category="special">✨ Special Filters</button>
+            </div>
+
+            <!-- 1. Basic Filters 목록 -->
+            <div id="basicPresetsList" class="preset-buttons hidden">
+              <button class="preset-btn" data-preset="none">Original</button>
+              <button class="preset-btn" data-preset="smooth">🌸 Smooth</button>
               <button class="preset-btn" data-preset="kbeauty">✨ K-Beauty</button>
               <button class="preset-btn" data-preset="glamour">💄 Glamour</button>
-              <button class="preset-btn" data-preset="smooth">🌸 Smooth</button>
               <button class="preset-btn" data-preset="warm">☀️ Warm</button>
               <button class="preset-btn" data-preset="cool">❄️ Cool</button>
               <button class="preset-btn" data-preset="vintage">🎞️ Vintage</button>
-              <button class="preset-btn" data-preset="none">Original</button>
+              <button class="preset-btn" data-preset="monochrome">🖤 Mono</button>
+            </div>
+
+            <!-- 2. Special Filters 목록 (The Best Makeup Mask 등) -->
+            <div id="specialPresetsList" class="preset-buttons">
+              <button class="preset-btn active" data-preset="bestMakeup">👑 Best Makeup</button>
+              <button class="preset-btn" data-preset="idolMask">🎀 Idol Mask</button>
+              <button class="preset-btn" data-preset="foxEyes">🦊 Fox Eyes</button>
+              <button class="preset-btn" data-preset="goldenHour">🌟 Golden Hour</button>
             </div>
           </div>
 
@@ -236,13 +250,26 @@
         <button id="closeDrawerBtn" class="close-btn">✕</button>
       </div>
       <div class="drawer-body">
-        <div class="preset-buttons small">
-          <button class="preset-btn in-call-preset active" data-preset="bestMakeup">Best Makeup</button>
+        <!-- 통화 중 카테고리 탭 -->
+        <div class="category-tabs small">
+          <button class="category-tab-btn in-call-tab-btn" data-category="basic">Basic</button>
+          <button class="category-tab-btn in-call-tab-btn active" data-category="special">Special</button>
+        </div>
+
+        <div id="inCallBasicPresetsList" class="preset-buttons small hidden">
+          <button class="preset-btn in-call-preset" data-preset="none">Original</button>
+          <button class="preset-btn in-call-preset" data-preset="smooth">Smooth</button>
           <button class="preset-btn in-call-preset" data-preset="kbeauty">K-Beauty</button>
           <button class="preset-btn in-call-preset" data-preset="glamour">Glamour</button>
-          <button class="preset-btn in-call-preset" data-preset="smooth">Smooth</button>
           <button class="preset-btn in-call-preset" data-preset="warm">Warm</button>
-          <button class="preset-btn in-call-preset" data-preset="none">None</button>
+          <button class="preset-btn in-call-preset" data-preset="cool">Cool</button>
+        </div>
+
+        <div id="inCallSpecialPresetsList" class="preset-buttons small">
+          <button class="preset-btn in-call-preset active" data-preset="bestMakeup">Best Makeup</button>
+          <button class="preset-btn in-call-preset" data-preset="idolMask">Idol Mask</button>
+          <button class="preset-btn in-call-preset" data-preset="foxEyes">Fox Eyes</button>
+          <button class="preset-btn in-call-preset" data-preset="goldenHour">Golden Hour</button>
         </div>
         <div class="slider-group">
           <div class="slider-header">

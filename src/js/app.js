@@ -64,7 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toggleCamBtn = document.getElementById('toggleCamBtn');
   const toggleFlipBtn = document.getElementById('toggleFlipBtn');
 
-  // 필터 프리셋
+  // 필터 프리셋 및 카테고리
+  const categoryTabBtns = document.querySelectorAll('.category-tab-btn');
+  const basicPresetsList = document.getElementById('basicPresetsList');
+  const specialPresetsList = document.getElementById('specialPresetsList');
+  const inCallBasicPresetsList = document.getElementById('inCallBasicPresetsList');
+  const inCallSpecialPresetsList = document.getElementById('inCallSpecialPresetsList');
   const presetBtns = document.querySelectorAll('.preset-btn');
 
   // 메이크업 & 뷰티 슬라이더 (대기실)
@@ -221,6 +226,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 초기 슬라이더 수치 세팅
   updateSliderDisplay();
+
+  // 카테고리 탭 (Basic Filters vs Special Filters) 전환 이벤트
+  categoryTabBtns.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const category = tab.dataset.category;
+
+      // 탭 버튼 스타일 동기화 (대기실 & 통화 중 드로어)
+      document.querySelectorAll(`.category-tab-btn`).forEach(t => {
+        t.classList.toggle('active', t.dataset.category === category);
+      });
+
+      // 목록 보이기/숨기기
+      const isBasic = category === 'basic';
+      if (basicPresetsList) basicPresetsList.classList.toggle('hidden', !isBasic);
+      if (specialPresetsList) specialPresetsList.classList.toggle('hidden', isBasic);
+      if (inCallBasicPresetsList) inCallBasicPresetsList.classList.toggle('hidden', !isBasic);
+      if (inCallSpecialPresetsList) inCallSpecialPresetsList.classList.toggle('hidden', isBasic);
+    });
+  });
 
   // 프리셋 버튼 클릭 이벤트
   presetBtns.forEach(btn => {
