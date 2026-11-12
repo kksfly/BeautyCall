@@ -68,8 +68,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const presetBtns = document.querySelectorAll('.preset-btn');
 
   // 메이크업 & 뷰티 슬라이더 (대기실)
-  const eyeBrightenSlider = document.getElementById('eyeBrightenSlider');
-  const eyeBrightenVal = document.getElementById('eyeBrightenVal');
+  const eyelinerSlider = document.getElementById('eyelinerSlider');
+  const eyelinerVal = document.getElementById('eyelinerVal');
+  const highlighterSlider = document.getElementById('highlighterSlider');
+  const highlighterVal = document.getElementById('highlighterVal');
   const blushSlider = document.getElementById('blushSlider');
   const blushVal = document.getElementById('blushVal');
   const lipTintSlider = document.getElementById('lipTintSlider');
@@ -94,8 +96,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const closeDrawerBtn = document.getElementById('closeDrawerBtn');
 
   // 통화 중 필터 슬라이더
-  const inCallEyeSlider = document.getElementById('inCallEyeSlider');
-  const inCallEyeVal = document.getElementById('inCallEyeVal');
+  const inCallEyelinerSlider = document.getElementById('inCallEyelinerSlider');
+  const inCallEyelinerVal = document.getElementById('inCallEyelinerVal');
+  const inCallHighlighterSlider = document.getElementById('inCallHighlighterSlider');
+  const inCallHighlighterVal = document.getElementById('inCallHighlighterVal');
   const inCallBlushSlider = document.getElementById('inCallBlushSlider');
   const inCallBlushVal = document.getElementById('inCallBlushVal');
   const inCallLipSlider = document.getElementById('inCallLipSlider');
@@ -113,9 +117,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let webrtcManager = null;
   let remoteUsersCount = 0;
 
-  // 1. 뷰티 필터 엔진 인스턴스 (기본 프리셋: glamour 메이크업)
+  // 1. 뷰티 필터 엔진 인스턴스 (기본 프리셋: Facebook Messenger 스타일 The Best Makeup)
   const filterProcessor = new BeautyFilterProcessor();
-  filterProcessor.setPreset('glamour');
+  filterProcessor.setPreset('bestMakeup');
 
   // 프리뷰 및 로컬 화면 복사 동기화 루프
   function startSyncPreviewLoop() {
@@ -167,9 +171,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 3. 슬라이더 수치 및 상태 동기화 함수
   function updateSliderDisplay() {
     const s = filterProcessor.settings;
-    if (eyeBrightenSlider) {
-      eyeBrightenSlider.value = s.eyeBrighten;
-      eyeBrightenVal.textContent = `${s.eyeBrighten}%`;
+    if (eyelinerSlider) {
+      eyelinerSlider.value = s.eyeliner;
+      eyelinerVal.textContent = `${s.eyeliner}%`;
+    }
+    if (highlighterSlider) {
+      highlighterSlider.value = s.highlighter;
+      highlighterVal.textContent = `${s.highlighter}%`;
     }
     if (blushSlider) {
       blushSlider.value = s.blush;
@@ -189,9 +197,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 통화 중 드로어 슬라이더 동기화
-    if (inCallEyeSlider) {
-      inCallEyeSlider.value = s.eyeBrighten;
-      inCallEyeVal.textContent = `${s.eyeBrighten}%`;
+    if (inCallEyelinerSlider) {
+      inCallEyelinerSlider.value = s.eyeliner;
+      inCallEyelinerVal.textContent = `${s.eyeliner}%`;
+    }
+    if (inCallHighlighterSlider) {
+      inCallHighlighterSlider.value = s.highlighter;
+      inCallHighlighterVal.textContent = `${s.highlighter}%`;
     }
     if (inCallBlushSlider) {
       inCallBlushSlider.value = s.blush;
@@ -247,8 +259,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 눈가 브라이트닝, 볼터치, 입술 틴트, 피부 보정, 밝기 슬라이더 연결
-  bindSlider(eyeBrightenSlider, eyeBrightenVal, inCallEyeSlider, inCallEyeVal, 'eyeBrighten');
+  // 아이라인, 하이라이터, 볼터치, 입술 틴트, 피부 보정, 밝기 슬라이더 연결
+  bindSlider(eyelinerSlider, eyelinerVal, inCallEyelinerSlider, inCallEyelinerVal, 'eyeliner');
+  bindSlider(highlighterSlider, highlighterVal, inCallHighlighterSlider, inCallHighlighterVal, 'highlighter');
   bindSlider(blushSlider, blushVal, inCallBlushSlider, inCallBlushVal, 'blush');
   bindSlider(lipTintSlider, lipTintVal, inCallLipSlider, inCallLipVal, 'lipTint');
   bindSlider(smoothingSlider, smoothingVal, inCallSmoothingSlider, inCallSmoothingVal, 'smoothing');
