@@ -166,6 +166,18 @@ class BeautyFilterProcessor {
         eyeBrighten: 45,
         blush: 60,          // 귀여운 핑크 볼터치
         lipTint: 70         // 로즈 립
+      },
+      aeca: {
+        specialType: 'aeca',
+        smoothing: 82,      // 뽀샤시 도자기 피부
+        brightness: 115,
+        contrast: 103,
+        saturation: 110,
+        rosyTint: 20,
+        vignette: false,
+        eyeBrighten: 45,
+        blush: 65,          // 발그레한 핑크 볼터치
+        lipTint: 68         // 생기 있는 립 틴트
       }
     };
 
@@ -929,6 +941,117 @@ class BeautyFilterProcessor {
       this.ctx.font = `${Math.round(scale * 0.28)}px sans-serif`;
       this.ctx.fillText('✨', w * 0.52, -h * 0.55);
       this.ctx.fillText('⭐', -w * 0.52, -h * 0.55);
+    }
+
+    // 7. 👓 AECA 안경 (사진 속 귀여운 파스텔 핑크 뿔테 안경)
+    else if (type === 'aeca') {
+      const eyeMidX = (leftEye.x + rightEye.x) / 2;
+      const eyeMidY = (leftEye.y + rightEye.y) / 2;
+      const eyeDist = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
+
+      this.ctx.translate(eyeMidX, eyeMidY);
+      this.ctx.rotate(angle);
+
+      // 사진 속 오버사이즈 둥근 사각 핑크 뿔테 규격
+      const lensW = eyeDist * 0.94;   // 렌즈 가로 폭
+      const lensH = eyeDist * 0.72;   // 렌즈 세로 높이
+      const halfDist = eyeDist * 0.52; // 두 눈 중심 간격
+      const frameThick = Math.max(3.8, eyeDist * 0.088); // 뿔테 두께
+      const cornerR = lensH * 0.28;   // 부드러운 사각 라운드 반경
+
+      // 1. 안경 전체 자연스러운 그림자
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowOffsetY = 5;
+
+      // 2. 핑크 뿔테 그라데이션 (상단 밝은 핑크 -> 하단 사랑스러운 베이비 핑크)
+      const pinkGrad = this.ctx.createLinearGradient(0, -lensH * 0.6, 0, lensH * 0.6);
+      pinkGrad.addColorStop(0, '#ffa8bc');   // 상단 화사한 라이트 핑크
+      pinkGrad.addColorStop(0.5, '#ff7a9b'); // 메인 버블검 핑크
+      pinkGrad.addColorStop(1, '#f45880');   // 하단 코랄 핑크
+
+      // 3. 양쪽 안경다리(템플) - 귀 방향으로 뻗는 연보라 핑크 다리
+      this.ctx.fillStyle = '#d28cf5';
+      this.ctx.strokeStyle = '#f45880';
+      this.ctx.lineWidth = 1.5;
+
+      const templeW = eyeDist * 0.35;
+      const templeH = frameThick * 0.75;
+      // 왼쪽 템플
+      this.ctx.beginPath();
+      this.ctx.roundRect(-halfDist - lensW * 0.5 - templeW + frameThick * 0.5, -lensH * 0.35, templeW, templeH, 3);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // 오른쪽 템플
+      this.ctx.beginPath();
+      this.ctx.roundRect(halfDist + lensW * 0.5 - frameThick * 0.5, -lensH * 0.35, templeW, templeH, 3);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // 4. 핑크 뿔테 프레임 테두리 (외곽 스트로크 렌더링)
+      this.ctx.strokeStyle = pinkGrad;
+      this.ctx.lineWidth = frameThick;
+      this.ctx.lineJoin = 'round';
+
+      // 왼쪽 렌즈 핑크 림
+      this.ctx.beginPath();
+      this.ctx.roundRect(-halfDist - lensW * 0.5, -lensH * 0.5, lensW, lensH, cornerR);
+      this.ctx.stroke();
+
+      // 오른쪽 렌즈 핑크 림
+      this.ctx.beginPath();
+      this.ctx.roundRect(halfDist - lensW * 0.5, -lensH * 0.5, lensW, lensH, cornerR);
+      this.ctx.stroke();
+
+      // 5. 코 브릿지 (가운데 아치형 핑크 브릿지)
+      const bridgeW = eyeDist * 0.34;
+      this.ctx.beginPath();
+      this.ctx.moveTo(-bridgeW * 0.5, -lensH * 0.1);
+      this.ctx.quadraticCurveTo(0, -lensH * 0.28, bridgeW * 0.5, -lensH * 0.1);
+      this.ctx.stroke();
+
+      // 양쪽 엔드피스 (바깥쪽 뿔테 돌출부)
+      this.ctx.fillStyle = pinkGrad;
+      this.ctx.beginPath();
+      this.ctx.roundRect(-halfDist - lensW * 0.5 - frameThick * 0.7, -lensH * 0.38, frameThick * 1.4, frameThick * 1.1, 2);
+      this.ctx.roundRect(halfDist + lensW * 0.5 - frameThick * 0.7, -lensH * 0.38, frameThick * 1.4, frameThick * 1.1, 2);
+      this.ctx.fill();
+
+      // 6. 그림자 제거 후 맑은 투명 렌즈 코팅 & 대각선 반사광 (Glass Sheen)
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetY = 0;
+
+      // 맑은 블루라이트 차단빛 은은한 틴트
+      this.ctx.fillStyle = 'rgba(215, 240, 255, 0.08)';
+      this.ctx.beginPath();
+      this.ctx.roundRect(-halfDist - lensW * 0.5 + frameThick * 0.5, -lensH * 0.5 + frameThick * 0.5, lensW - frameThick, lensH - frameThick, cornerR * 0.8);
+      this.ctx.roundRect(halfDist - lensW * 0.5 + frameThick * 0.5, -lensH * 0.5 + frameThick * 0.5, lensW - frameThick, lensH - frameThick, cornerR * 0.8);
+      this.ctx.fill();
+
+      // 깨끗한 대각선 반사광 (Glossy Glare)
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+      this.ctx.lineWidth = Math.max(2, eyeDist * 0.032);
+      this.ctx.lineCap = 'round';
+
+      // 왼쪽 렌즈 반사광
+      this.ctx.beginPath();
+      this.ctx.moveTo(-halfDist - lensW * 0.28, -lensH * 0.32);
+      this.ctx.lineTo(-halfDist + lensW * 0.18, lensH * 0.26);
+      this.ctx.stroke();
+
+      // 오른쪽 렌즈 반사광
+      this.ctx.beginPath();
+      this.ctx.moveTo(halfDist - lensW * 0.28, -lensH * 0.32);
+      this.ctx.lineTo(halfDist + lensW * 0.18, lensH * 0.26);
+      this.ctx.stroke();
+
+      // 7. 귀여운 반짝이 스파클 포인트 (안경 모서리)
+      this.ctx.font = `${Math.round(eyeDist * 0.32)}px sans-serif`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('✨', halfDist + lensW * 0.56, -lensH * 0.52);
     }
 
     this.ctx.restore();

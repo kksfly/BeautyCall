@@ -255,6 +255,16 @@ const FILTERS_CONFIG = {
         smoothing: 82, brightness: 114, contrast: 103, saturation: 112,
         rosyTint: 20, eyeBrighten: 45, blush: 60, lipTint: 70
       }
+    },
+    {
+      id: 'aeca',
+      name: '👓 AECA 안경',
+      desc: 'Adorable baby-pink AECA glasses with clear lenses and sparkling cuteness!',
+      specialType: 'aeca',
+      settings: {
+        smoothing: 82, brightness: 115, contrast: 103, saturation: 110,
+        rosyTint: 20, eyeBrighten: 45, blush: 65, lipTint: 68
+      }
     }
   ]
 };
