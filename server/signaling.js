@@ -258,7 +258,7 @@ const FILTERS_CONFIG = {
     },
     {
       id: 'aeca',
-      name: '👓 AECA 안경',
+      name: '👓 AECA Glasses',
       desc: 'Adorable baby-pink AECA glasses with clear lenses and sparkling cuteness!',
       specialType: 'aeca',
       settings: {

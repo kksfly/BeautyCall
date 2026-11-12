@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             { id: 'sunglasses', name: '🕶️ Cool Shades', desc: 'Sleek beauty skin + cool dark sunglasses fitting right on your eyes.' },
             { id: 'dotMask', name: '⚪ Cyber Dot Mask', desc: 'Hypnotic matrix dots covering your face with crystal clear eyes.' },
             { id: 'sausage', name: '🌭 Cute Sausage', desc: 'Flawless beauty skin + a cute plump juicy sausage on your head tracking your movements!' },
-            { id: 'aeca', name: '👓 AECA 안경', desc: 'Adorable baby-pink AECA glasses with clear lenses and sparkling cuteness!' }
+            { id: 'aeca', name: '👓 AECA Glasses', desc: 'Adorable baby-pink AECA glasses with clear lenses and sparkling cuteness!' }
           ]
         };
         renderFilterButtons(localConfig);
