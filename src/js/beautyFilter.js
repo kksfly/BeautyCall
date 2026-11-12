@@ -142,7 +142,19 @@ class BeautyFilterProcessor {
         lipTint: 30
       },
       hotdog: {
-        specialType: 'hotdog',
+        specialType: 'sausage',
+        smoothing: 82,      // 뽀샤시 도자기 피부
+        brightness: 114,
+        contrast: 103,
+        saturation: 112,
+        rosyTint: 20,
+        vignette: false,
+        eyeBrighten: 45,
+        blush: 60,          // 귀여운 핑크 볼터치
+        lipTint: 70         // 로즈 립
+      },
+      sausage: {
+        specialType: 'sausage',
         smoothing: 82,      // 뽀샤시 도자기 피부
         brightness: 114,
         contrast: 103,
@@ -781,36 +793,125 @@ class BeautyFilterProcessor {
       this.ctx.restore();
     }
 
-    // 6. 🌭 머리 위의 귀여운 핫도그 (Hotdog on Head)
-    else if (type === 'hotdog') {
-      const propY = headTop.y - scale * 0.35;
+    // 6. 🌭 머리 위의 통통하고 귀여운 소세지 (Cute Sausage on Head)
+    else if (type === 'sausage' || type === 'hotdog') {
+      const propY = headTop.y - scale * 0.38;
       this.ctx.translate(headTop.x, propY);
       this.ctx.rotate(angle);
 
-      const propSize = scale * 1.05; // 머리 위에 알맞은 크기의 핫도그
+      // 소세지 본체 크기 (가로로 통통하게 얹혀짐)
+      const w = scale * 1.05; // 소세지 가로 길이
+      const h = scale * 0.44; // 소세지 세로 두께
+      const r = h * 0.5;      // 캡슐 라운드 반경
 
-      // 입체적인 그림자
+      // 1. 소세지 전체 입체 그림자
       this.ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-      this.ctx.shadowBlur = 12;
-      this.ctx.shadowOffsetY = 7;
+      this.ctx.shadowBlur = 14;
+      this.ctx.shadowOffsetY = 8;
 
-      this.ctx.font = `${Math.round(propSize)}px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Apple Color Emoji"`;
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
-      this.ctx.fillText('🌭', 0, 0);
+      // 2. 소세지 캡슐 바디 (매끄러운 그라데이션)
+      const sausageGrad = this.ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+      sausageGrad.addColorStop(0, '#ff6b81');   // 상단 밝은 코랄 핑크 하이라이트
+      sausageGrad.addColorStop(0.3, '#ee5253'); // 신선하고 먹음직스러운 레드
+      sausageGrad.addColorStop(0.7, '#d63031'); // 깊은 소세지 레드
+      sausageGrad.addColorStop(1, '#8b152b');   // 하단 섀도우
 
-      // 따끈따끈 모락모락 김 & 귀여운 반짝이 파티클
+      this.ctx.fillStyle = sausageGrad;
+      this.ctx.beginPath();
+      this.ctx.roundRect(-w / 2, -h / 2, w, h, r);
+      this.ctx.fill();
+
+      // 소세지 외곽 테두리 (살짝 짙은 윤곽선)
+      this.ctx.strokeStyle = '#741022';
+      this.ctx.lineWidth = Math.max(1.5, scale * 0.02);
+      this.ctx.stroke();
+
+      // 그림자 해제
+      this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
       this.ctx.shadowOffsetY = 0;
 
-      // 모락모락 김 (상단)
-      this.ctx.font = `${Math.round(propSize * 0.32)}px sans-serif`;
-      this.ctx.fillText('♨️', 0, -propSize * 0.45);
+      // 3. 양쪽 끝 매듭 주름 디테일 (비엔나 꼬투리)
+      this.ctx.fillStyle = '#6b0f20';
+      this.ctx.beginPath();
+      this.ctx.arc(-w / 2 + r * 0.25, 0, r * 0.22, 0, Math.PI * 2);
+      this.ctx.arc(w / 2 - r * 0.25, 0, r * 0.22, 0, Math.PI * 2);
+      this.ctx.fill();
 
-      // 반짝이는 별빛 파티클
-      this.ctx.font = `${Math.round(propSize * 0.28)}px sans-serif`;
-      this.ctx.fillText('✨', propSize * 0.5, -propSize * 0.2);
-      this.ctx.fillText('⭐', -propSize * 0.5, -propSize * 0.25);
+      // 4. 귀여운 사선 칼집 (3줄)
+      const cutOffsets = [-w * 0.24, 0, w * 0.24];
+      cutOffsets.forEach(cx => {
+        // 칼집 벌어진 안쪽 핑크 살코기
+        this.ctx.strokeStyle = 'rgba(255, 205, 215, 0.9)';
+        this.ctx.lineWidth = Math.max(2.5, scale * 0.035);
+        this.ctx.lineCap = 'round';
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx - scale * 0.06, -h * 0.35);
+        this.ctx.lineTo(cx + scale * 0.06, h * 0.25);
+        this.ctx.stroke();
+
+        // 칼집 안쪽 짙은 그림자 라인
+        this.ctx.strokeStyle = 'rgba(115, 15, 30, 0.7)';
+        this.ctx.lineWidth = Math.max(1, scale * 0.015);
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx - scale * 0.06, -h * 0.35);
+        this.ctx.lineTo(cx + scale * 0.06, h * 0.25);
+        this.ctx.stroke();
+      });
+
+      // 5. 상단 탱글탱글 윤기 하이라이트 (Glossy White Sheen)
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      this.ctx.lineWidth = Math.max(2, scale * 0.03);
+      this.ctx.lineCap = 'round';
+      this.ctx.beginPath();
+      this.ctx.moveTo(-w * 0.38, -h * 0.28);
+      this.ctx.quadraticCurveTo(0, -h * 0.34, w * 0.38, -h * 0.28);
+      this.ctx.stroke();
+
+      // 6. 소세지 얼굴 카와이 표정 (귀여운 눈 & 볼터치 & 미소 입)
+      // 양쪽 눈 (초롱초롱 블랙 도트)
+      const eyeSpacing = w * 0.12;
+      const eyeY = -h * 0.02;
+      const eyeRadius = Math.max(2.5, scale * 0.03);
+      this.ctx.fillStyle = '#2d3436';
+      this.ctx.beginPath();
+      this.ctx.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
+      this.ctx.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // 눈 속 하얀 반짝이 하이라이트
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.beginPath();
+      this.ctx.arc(-eyeSpacing - eyeRadius * 0.3, eyeY - eyeRadius * 0.3, eyeRadius * 0.4, 0, Math.PI * 2);
+      this.ctx.arc(eyeSpacing - eyeRadius * 0.3, eyeY - eyeRadius * 0.3, eyeRadius * 0.4, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // 귀여운 핑크 볼터치
+      this.ctx.fillStyle = 'rgba(255, 120, 160, 0.85)';
+      this.ctx.beginPath();
+      this.ctx.arc(-eyeSpacing - eyeRadius * 1.5, eyeY + eyeRadius * 1.2, eyeRadius * 0.9, 0, Math.PI * 2);
+      this.ctx.arc(eyeSpacing + eyeRadius * 1.5, eyeY + eyeRadius * 1.2, eyeRadius * 0.9, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // 귀여운 방긋 미소 입 (∪)
+      this.ctx.strokeStyle = '#2d3436';
+      this.ctx.lineWidth = Math.max(1.8, scale * 0.022);
+      this.ctx.beginPath();
+      this.ctx.arc(0, eyeY + eyeRadius * 0.6, eyeRadius * 0.8, 0.1 * Math.PI, 0.9 * Math.PI, false);
+      this.ctx.stroke();
+
+      // 7. 소세지 위 모락모락 김(♨️) & 반짝이(✨, ⭐)
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      // 모락모락 김
+      this.ctx.font = `${Math.round(scale * 0.34)}px sans-serif`;
+      this.ctx.fillText('♨️', 0, -h * 0.9);
+
+      // 양쪽 반짝이
+      this.ctx.font = `${Math.round(scale * 0.28)}px sans-serif`;
+      this.ctx.fillText('✨', w * 0.52, -h * 0.55);
+      this.ctx.fillText('⭐', -w * 0.52, -h * 0.55);
     }
 
     this.ctx.restore();

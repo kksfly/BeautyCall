@@ -247,10 +247,10 @@ const FILTERS_CONFIG = {
       }
     },
     {
-      id: 'hotdog',
-      name: '🌭 Hotdog on Head',
-      desc: 'Delicious & cute hotdog balancing on your head tracking your movements!',
-      specialType: 'hotdog',
+      id: 'sausage',
+      name: '🌭 Cute Sausage',
+      desc: 'Flawless beauty skin + a cute plump juicy sausage on your head tracking your movement!',
+      specialType: 'sausage',
       settings: {
         smoothing: 82, brightness: 114, contrast: 103, saturation: 112,
         rosyTint: 20, eyeBrighten: 45, blush: 60, lipTint: 70
