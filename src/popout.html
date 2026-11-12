@@ -274,7 +274,7 @@
     let currentStream = null;
 
     // 부모 창(window.opener)으로부터 스트림 수신 함수
-    window.setStream = function(stream, sharerName = 'Participant') {
+    window.setStream = function(stream, sharerName = 'Participant', isSelf = false) {
       if (!stream) {
         screenVideo.srcObject = null;
         emptyPlaceholder.style.display = 'flex';
@@ -285,7 +285,24 @@
       currentStream = stream;
       screenVideo.srcObject = stream;
       emptyPlaceholder.style.display = 'none';
-      sharerNameText.textContent = `🎬 ${sharerName}'s Watch Party`;
+
+      if (isSelf) {
+        // 🛡️ 공유자 본인(호스트)은 PC에서 직접 영화/영상 소리를 듣고 있으므로,
+        // 팝아웃 창의 오디오를 자동 음소거하여 이중 소리(Double Audio/Echo)를 방지합니다.
+        screenVideo.muted = true;
+        volumeSlider.value = 0;
+        muteBtn.textContent = '🔇';
+        volumePercent.textContent = 'Muted';
+        sharerNameText.textContent = `🎬 Your Watch Party (Muted to prevent echo)`;
+      } else {
+        // 상대방(시청자)은 정상적인 볼륨으로 재생
+        screenVideo.muted = false;
+        screenVideo.volume = 1;
+        volumeSlider.value = 1;
+        muteBtn.textContent = '🔊';
+        volumePercent.textContent = '100%';
+        sharerNameText.textContent = `🎬 ${sharerName}'s Watch Party`;
+      }
 
       screenVideo.play().catch(e => {
         console.warn('자동 재생 정책으로 인해 클릭 대기:', e);
@@ -297,7 +314,7 @@
       if (window.opener && typeof window.opener.getWatchPartyStream === 'function') {
         const data = window.opener.getWatchPartyStream();
         if (data && data.stream) {
-          window.setStream(data.stream, data.sharerName);
+          window.setStream(data.stream, data.sharerName, !!data.isSelf);
         }
       }
     });
@@ -366,3 +383,4 @@
   </script>
 </body>
 </html>
+

@@ -1185,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       },
       onRemoteScreenStream: (socketId, sharerName, stream) => {
         console.log(`🎬 원격 화면 공유 수신: ${sharerName} (${socketId})`);
-        activeWatchPartyData = { stream, sharerName };
+        activeWatchPartyData = { stream, sharerName, isSelf: false };
         if (watchPartyBanner) {
           watchPartyBanner.classList.remove('hidden');
           if (watchPartyBannerText) {
@@ -1340,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       popoutWindow.focus();
       if (activeWatchPartyData) {
         try {
-          popoutWindow.setStream(activeWatchPartyData.stream, activeWatchPartyData.sharerName);
+          popoutWindow.setStream(activeWatchPartyData.stream, activeWatchPartyData.sharerName, !!activeWatchPartyData.isSelf);
         } catch (_) {}
       }
       return popoutWindow;
@@ -1356,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       setTimeout(() => {
         try {
           if (popoutWindow && !popoutWindow.closed && typeof popoutWindow.setStream === 'function') {
-            popoutWindow.setStream(activeWatchPartyData.stream, activeWatchPartyData.sharerName);
+            popoutWindow.setStream(activeWatchPartyData.stream, activeWatchPartyData.sharerName, !!activeWatchPartyData.isSelf);
           }
         } catch (_) {}
       }, 500);
@@ -1370,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const displayStream = await webrtcManager.startScreenShare();
       if (callToggleScreenBtn) callToggleScreenBtn.classList.add('sharing');
-      activeWatchPartyData = { stream: displayStream, sharerName: `${currentNickname} (You)` };
+      activeWatchPartyData = { stream: displayStream, sharerName: `${currentNickname} (You)`, isSelf: true };
 
       if (watchPartyBanner) {
         watchPartyBanner.classList.remove('hidden');
