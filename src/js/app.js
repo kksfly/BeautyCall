@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 드래그 핸들 (마우스 드래그 힌트)
       const dragHandle = document.createElement('span');
       dragHandle.className = 'filter-drag-handle';
-      dragHandle.title = '드래그하여 순서 변경';
+      dragHandle.title = 'Drag to reorder';
       dragHandle.textContent = '⋮⋮';
 
       actions.appendChild(dragHandle);
@@ -1086,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function setJoinLoadingState(isLoading) {
     if (joinBtnSpinner) joinBtnSpinner.classList.toggle('hidden', !isLoading);
     if (joinBtnArrow) joinBtnArrow.classList.toggle('hidden', isLoading);
-    if (joinBtnText) joinBtnText.textContent = isLoading ? '접속 중...' : 'Join Video Call';
+    if (joinBtnText) joinBtnText.textContent = isLoading ? 'Connecting...' : 'Join Video Call';
     if (joinCallBtn) joinCallBtn.disabled = isLoading;
   }
 
