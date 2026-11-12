@@ -3,7 +3,7 @@
  */
 class WebRTCManager {
   constructor({ socketUrl, onRemoteStream, onUserLeft, onError }) {
-    this.socketUrl = socketUrl || 'http://localhost:3500';
+    this.socketUrl = socketUrl || 'https://beautycall-server.onrender.com';
     this.socket = null;
     this.localStream = null;
     this.peers = {}; // { [socketId]: { peerConnection, nickname } }

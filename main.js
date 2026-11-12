@@ -51,8 +51,9 @@ app.whenReady().then(async () => {
     await systemPreferences.askForMediaAccess('microphone');
   }
 
-  // 로컬 시그널링 서버 자동 구동
-  startSignalingServer();
+  // 클라우드 시그널링 서버(Render)를 사용하므로 로컬 서버 실행은 비활성화합니다.
+  // 필요 시 startSignalingServer()를 호출하여 로컬에서 실행할 수도 있습니다.
+  // startSignalingServer();
 
   createWindow();
 

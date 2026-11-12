@@ -353,9 +353,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       combinedStream.addTrack(rawStream.getAudioTracks()[0]);
     }
 
-    // WebRTC 연결 관리자 초기화
+    // WebRTC 연결 관리자 초기화 (Render 클라우드 시그널링 서버 연동)
     webrtcManager = new WebRTCManager({
-      socketUrl: 'http://localhost:3500',
+      socketUrl: 'https://beautycall-server.onrender.com',
       onRemoteStream: (socketId, nickname, stream) => {
         addRemoteVideo(socketId, nickname, stream);
       },
