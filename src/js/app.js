@@ -60,9 +60,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nicknameInput = document.getElementById('nicknameInput');
   const roomIdInput = document.getElementById('roomIdInput');
   const joinCallBtn = document.getElementById('joinCallBtn');
+  const copyInviteLinkBtn = document.getElementById('copyInviteLinkBtn');
   const toggleMicBtn = document.getElementById('toggleMicBtn');
   const toggleCamBtn = document.getElementById('toggleCamBtn');
   const toggleFlipBtn = document.getElementById('toggleFlipBtn');
+
+  // 보안 인증 모달 & 차단 오버레이 DOM
+  const authModal = document.getElementById('authModal');
+  const blockedOverlay = document.getElementById('blockedOverlay');
+  const accessKeyInput = document.getElementById('accessKeyInput');
+  const verifyKeyBtn = document.getElementById('verifyKeyBtn');
+  const authErrorMsg = document.getElementById('authErrorMsg');
+  const remainingAttemptsText = document.getElementById('remainingAttemptsText');
+  const blockedTimeBadge = document.getElementById('blockedTimeBadge');
 
   // 필터 프리셋 및 카테고리
   const categoryTabBtns = document.querySelectorAll('.category-tab-btn');
@@ -132,11 +142,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   let webrtcManager = null;
   let remoteUsersCount = 0;
 
-  // 시그널링 서버 주소
-  const SIGNALING_URL = 'https://beautycall-server.onrender.com';
+  // 시그널링 서버 주소 (웹 브라우저 접속 시 자기 자신 origin, Electron 접속 시 Render 클라우드)
+  const SIGNALING_URL = (typeof window !== 'undefined' && window.location.protocol.startsWith('http'))
+    ? window.location.origin
+    : 'https://video-call-app-q6e2.onrender.com';
 
   // 로컬 스토리지 키
   const FILTER_STORAGE_KEY = 'beautycall_filter_settings';
+  const AUTH_STORAGE_KEY = 'beautycall_access_key';
+
+  // 현재 인증 키
+  let currentAccessKey = localStorage.getItem(AUTH_STORAGE_KEY) || '';
 
   // 1. 뷰티 필터 엔진 인스턴스 생성
   const filterProcessor = new BeautyFilterProcessor();
@@ -347,49 +363,222 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✨ 서버 필터 목록 UI 렌더링 완료');
   }
 
-  // 앱 시작 시 시그널링 서버로부터 최신 필터 목록 자동 로드 (REST API)
-  fetch(`${SIGNALING_URL}/api/filters`)
-    .then(res => res.json())
-    .then(data => {
-      renderFilterButtons(data);
-      updateSliderDisplay();
-    })
-    .catch(err => {
-      console.warn('원격 필터 로드 실패(로컬 기본값 사용):', err);
-      const localConfig = {
-        basic: [
-          { id: 'none', name: 'Original' },
-          { id: 'smooth', name: '🌸 Smooth' },
-          { id: 'kbeauty', name: '✨ K-Beauty' },
-          { id: 'glamour', name: '💄 Glamour' },
-          { id: 'warm', name: '☀️ Warm' },
-          { id: 'cool', name: '❄️ Cool' },
-          { id: 'vintage', name: '🎞️ Vintage' },
-          { id: 'monochrome', name: '🖤 Mono' }
-        ],
-        special: [
-          { id: 'poop', name: '💩 Poop on Head', desc: 'Flawless beauty skin + a cute funny poop on your head tracking your movement!' },
-          { id: 'catEars', name: '🐱 Cute Kitty', desc: 'Porcelain skin + adorable pink cat ears, whiskers and jelly nose.' },
-          { id: 'crown', name: '👑 Royal Crown', desc: 'Luminous royal glam + a glowing golden crown on your head with sparkling stars.' },
-          { id: 'sunglasses', name: '🕶️ Cool Shades', desc: 'Sleek beauty skin + cool dark sunglasses fitting right on your eyes.' },
-          { id: 'dotMask', name: '⚪ Cyber Dot Mask', desc: 'Hypnotic matrix dots covering your face with crystal clear eyes.' }
-        ]
-      };
-      renderFilterButtons(localConfig);
-      updateSliderDisplay();
-    });
+  // 원격 필터 목록 로드 함수
+  function loadRemoteFilters() {
+    fetch(`${SIGNALING_URL}/api/filters`)
+      .then(res => res.json())
+      .then(data => {
+        renderFilterButtons(data);
+        updateSliderDisplay();
+      })
+      .catch(err => {
+        console.warn('원격 필터 로드 실패(로컬 기본값 사용):', err);
+        const localConfig = {
+          basic: [
+            { id: 'none', name: 'Original' },
+            { id: 'smooth', name: '🌸 Smooth' },
+            { id: 'kbeauty', name: '✨ K-Beauty' },
+            { id: 'glamour', name: '💄 Glamour' },
+            { id: 'warm', name: '☀️ Warm' },
+            { id: 'cool', name: '❄️ Cool' },
+            { id: 'vintage', name: '🎞️ Vintage' },
+            { id: 'monochrome', name: '🖤 Mono' }
+          ],
+          special: [
+            { id: 'poop', name: '💩 Poop on Head', desc: 'Flawless beauty skin + a cute funny poop on your head tracking your movement!' },
+            { id: 'catEars', name: '🐱 Cute Kitty', desc: 'Porcelain skin + adorable pink cat ears, whiskers and jelly nose.' },
+            { id: 'crown', name: '👑 Royal Crown', desc: 'Luminous royal glam + a glowing golden crown on your head with sparkling stars.' },
+            { id: 'sunglasses', name: '🕶️ Cool Shades', desc: 'Sleek beauty skin + cool dark sunglasses fitting right on your eyes.' },
+            { id: 'dotMask', name: '⚪ Cyber Dot Mask', desc: 'Hypnotic matrix dots covering your face with crystal clear eyes.' }
+          ]
+        };
+        renderFilterButtons(localConfig);
+        updateSliderDisplay();
+      });
+  }
 
-  // 대기실 소켓 연결 (실시간 필터 업데이트 이벤트 수신용)
-  if (typeof io !== 'undefined') {
-    const lobbySocket = io(SIGNALING_URL);
-    lobbySocket.on('filter-configs', (data) => {
-      renderFilterButtons(data);
-      updateSliderDisplay();
+  // 대기실 소켓 연결 (실시간 필터 업데이트 이벤트 수신용 + 인증 키 전달)
+  let lobbySocket = null;
+  function initLobbySocket() {
+    if (typeof io !== 'undefined' && currentAccessKey && !lobbySocket) {
+      lobbySocket = io(SIGNALING_URL, {
+        auth: { key: currentAccessKey }
+      });
+
+      lobbySocket.on('filter-configs', (data) => {
+        renderFilterButtons(data);
+        updateSliderDisplay();
+      });
+
+      lobbySocket.on('filters-updated', (data) => {
+        console.log('📢 서버에서 필터가 업데이트되었습니다!');
+        renderFilterButtons(data);
+        updateSliderDisplay();
+      });
+
+      lobbySocket.on('connect_error', (err) => {
+        console.warn('소켓 보안 차단 알림:', err.message);
+        if (err.message === 'IP_BLOCKED_FOR_24_HOURS') {
+          showBlockedOverlay(24);
+        }
+      });
+    }
+  }
+
+  // 🔒 24시간 차단 화면 표시
+  function showBlockedOverlay(remainingHours = 24) {
+    if (authModal) authModal.classList.add('hidden');
+    if (blockedOverlay) {
+      blockedOverlay.classList.remove('hidden');
+      if (blockedTimeBadge) {
+        blockedTimeBadge.textContent = `차단 해제까지: 약 ${remainingHours}시간`;
+      }
+    }
+  }
+
+  // 🔒 인증 모달 표시
+  function showAuthModal(remainingAttempts = 5, errorMsg = '') {
+    if (blockedOverlay) blockedOverlay.classList.add('hidden');
+    if (authModal) {
+      authModal.classList.remove('hidden');
+      if (remainingAttemptsText) remainingAttemptsText.textContent = `남은 기회: ${remainingAttempts}회`;
+      if (errorMsg && authErrorMsg) {
+        authErrorMsg.textContent = errorMsg;
+        authErrorMsg.classList.remove('hidden');
+      } else if (authErrorMsg) {
+        authErrorMsg.classList.add('hidden');
+      }
+      if (accessKeyInput) {
+        accessKeyInput.value = '';
+        accessKeyInput.focus();
+      }
+    }
+  }
+
+  // 🔒 액세스 키 검증 함수 (서버 API 호출)
+  async function verifyAccessCode(codeToTest, isAuto = false) {
+    if (!codeToTest && !isAuto) {
+      showAuthModal(5, '비밀번호를 입력해 주세요.');
+      return false;
+    }
+
+    try {
+      const res = await fetch(`${SIGNALING_URL}/api/verify-auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: codeToTest })
+      });
+
+      const data = await res.json();
+
+      if (res.status === 200 && data.success) {
+        // 인증 성공!
+        currentAccessKey = codeToTest;
+        localStorage.setItem(AUTH_STORAGE_KEY, codeToTest);
+        if (authModal) authModal.classList.add('hidden');
+        if (blockedOverlay) blockedOverlay.classList.add('hidden');
+        console.log('🔒 보안 인증 완료: 정상 접속 허용');
+
+        // URL 쿼리에 key가 있었다면 깔끔하게 정리 (방 번호만 유지)
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.searchParams.has('key')) {
+          currentUrl.searchParams.delete('key');
+          window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
+        }
+
+        // 서비스 초기화 진행
+        loadRemoteFilters();
+        initLobbySocket();
+        return true;
+      } else if (data.blocked) {
+        // 5회 이상 실패로 24시간 차단 상태
+        showBlockedOverlay(data.remainingHours || 24);
+        return false;
+      } else {
+        // 비밀번호 불일치 (남은 기회 안내)
+        currentAccessKey = '';
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        showAuthModal(data.remainingAttempts, data.message);
+        return false;
+      }
+    } catch (err) {
+      console.warn('인증 서버 연결 실패(오프라인 또는 오류):', err);
+      // 오프라인 상태에서도 기본 로드는 시도
+      loadRemoteFilters();
+      return true;
+    }
+  }
+
+  // 🔒 페이지 로드 시 URL 파라미터 및 저장된 키 검증
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramKey = urlParams.get('key');
+  const paramRoom = urlParams.get('room');
+  if (paramRoom && roomIdInput) {
+    roomIdInput.value = paramRoom;
+  }
+
+  // 초기 인증 시도
+  if (paramKey) {
+    // 1) URL에 ?key=...가 포함된 경우 자동 인증
+    verifyAccessCode(paramKey, true);
+  } else if (currentAccessKey) {
+    // 2) 브라우저에 저장된 키가 있는 경우 자동 인증
+    verifyAccessCode(currentAccessKey, true);
+  } else {
+    // 3) 키가 없으면 현재 IP 차단 상태 조회 후 모달 표시
+    fetch(`${SIGNALING_URL}/api/auth-status`)
+      .then(res => res.json())
+      .then(status => {
+        if (status.blocked) {
+          showBlockedOverlay(status.remainingHours || 24);
+        } else {
+          showAuthModal(status.remainingAttempts || 5);
+        }
+      })
+      .catch(() => {
+        showAuthModal(5);
+      });
+  }
+
+  // 모달 버튼 및 엔터키 이벤트 바인딩
+  if (verifyKeyBtn) {
+    verifyKeyBtn.addEventListener('click', () => {
+      const inputVal = accessKeyInput ? accessKeyInput.value.trim() : '';
+      verifyAccessCode(inputVal, false);
     });
-    lobbySocket.on('filters-updated', (data) => {
-      console.log('📢 서버에서 필터가 업데이트되었습니다!');
-      renderFilterButtons(data);
-      updateSliderDisplay();
+  }
+  if (accessKeyInput) {
+    accessKeyInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const inputVal = accessKeyInput.value.trim();
+        verifyAccessCode(inputVal, false);
+      }
+    });
+  }
+
+  // 🔗 지인 초대 링크 복사 버튼 이벤트 바인딩
+  if (copyInviteLinkBtn) {
+    copyInviteLinkBtn.addEventListener('click', () => {
+      const baseOrigin = (typeof window !== 'undefined' && window.location.protocol.startsWith('http'))
+        ? window.location.origin
+        : 'https://video-call-app-q6e2.onrender.com';
+      const targetRoom = roomIdInput ? roomIdInput.value.trim() || 'room-101' : 'room-101';
+      const inviteUrl = `${baseOrigin}/?key=${encodeURIComponent(currentAccessKey || 'beauty2026')}&room=${encodeURIComponent(targetRoom)}`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inviteUrl).then(() => {
+          copyInviteLinkBtn.classList.add('copied');
+          copyInviteLinkBtn.textContent = '✓ 초대 링크 복사 완료!';
+          setTimeout(() => {
+            copyInviteLinkBtn.classList.remove('copied');
+            copyInviteLinkBtn.textContent = '🔗 지인 초대 링크 복사';
+          }, 2500);
+        }).catch(() => {
+          prompt('아래 링크를 복사하여 지인 4명에게 보내주세요:', inviteUrl);
+        });
+      } else {
+        prompt('아래 링크를 복사하여 지인 4명에게 보내주세요:', inviteUrl);
+      }
     });
   }
 
@@ -665,9 +854,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       combinedStream.addTrack(rawStream.getAudioTracks()[0]);
     }
 
-    // WebRTC 연결 관리자 초기화 (Render 클라우드 시그널링 서버 연동)
+    // WebRTC 연결 관리자 초기화 (Render 클라우드 시그널링 서버 및 보안 키 연동)
     webrtcManager = new WebRTCManager({
-      socketUrl: 'https://beautycall-server.onrender.com',
+      socketUrl: SIGNALING_URL,
+      authKey: currentAccessKey,
       onRemoteStream: (socketId, nickname, stream) => {
         addRemoteVideo(socketId, nickname, stream);
       },

@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BeautyCall - Video Call with Beauty Filters</title>
-  <link rel="icon" type="image/png" href="../assets/icon.png">
+  <link rel="icon" type="image/png" href="assets/icon.png">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Socket.io 클라이언트 라이브러리 -->
-  <script src="../node_modules/socket.io/client-dist/socket.io.js"></script>
+  <!-- Socket.io 클라이언트 라이브러리 (웹 브라우저 CDN) -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <!-- Google MediaPipe Face Mesh 충돌 방지 로더 -->
   <script>
     if (typeof module === 'object') {
@@ -24,6 +24,37 @@
   </script>
 </head>
 <body>
+  <!-- ================= [보안: 24시간 접속 차단 오버레이] ================= -->
+  <div id="blockedOverlay" class="security-overlay hidden">
+    <div class="security-card blocked">
+      <div class="security-icon">⛔</div>
+      <h2>접속이 차단되었습니다</h2>
+      <p>비밀번호를 <strong>5회 이상</strong> 잘못 입력하여<br>보안 정책에 따라 <strong>24시간 동안</strong> 접속이 완전히 차단되었습니다.</p>
+      <div id="blockedTimeBadge" class="security-badge">차단 해제까지: 약 24시간</div>
+      <div class="security-subnote">브라우저나 PC를 재시작해도 24시간 동안 해제되지 않습니다.</div>
+    </div>
+  </div>
+
+  <!-- ================= [보안: 프라이빗 액세스 코드 입력 모달] ================= -->
+  <div id="authModal" class="security-overlay hidden">
+    <div class="security-card">
+      <div class="security-icon">🔒</div>
+      <h2>Private Access Only</h2>
+      <p>지인 4인 전용 비공개 화상 통화 서비스입니다.<br>공유받으신 <strong>비밀 액세스 코드</strong>를 입력해 주세요.</p>
+      
+      <div class="auth-input-box">
+        <input type="password" id="accessKeyInput" placeholder="비밀번호 입력" autofocus autocomplete="off" />
+        <button id="verifyKeyBtn" class="btn btn-primary">입장하기</button>
+      </div>
+
+      <div class="auth-warning">
+        ⚠️ <strong>주의:</strong> 5회 연속 잘못 입력 시 <strong>24시간 동안 접속이 자동 차단</strong>됩니다.
+        <div id="remainingAttemptsText" class="remaining-text">남은 기회: 5회</div>
+      </div>
+      <div id="authErrorMsg" class="auth-error-msg hidden"></div>
+    </div>
+  </div>
+
   <!-- 숨겨진 원본 웹캠 비디오 요소 (캔버스 렌더링 소스) -->
   <video id="rawWebcam" autoplay playsinline muted style="display: none;"></video>
 
@@ -81,10 +112,15 @@
               </div>
             </div>
 
-            <button id="joinCallBtn" class="join-primary-btn">
-              <span>Join Video Call</span>
-              <span class="btn-arrow">➔</span>
-            </button>
+            <div class="room-action-buttons">
+              <button id="joinCallBtn" class="join-primary-btn">
+                <span>Join Video Call</span>
+                <span class="btn-arrow">➔</span>
+              </button>
+              <button id="copyInviteLinkBtn" class="invite-link-btn" title="지인에게 보낼 초대 링크 복사 (키 및 방 번호 자동 포함)">
+                🔗 지인 초대 링크 복사
+              </button>
+            </div>
           </div>
         </div>
 
