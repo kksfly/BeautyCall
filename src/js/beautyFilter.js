@@ -664,12 +664,11 @@ class BeautyFilterProcessor {
       const lipRadiusX = (coords.lip.radiusX || 30) * 1.25;
       const lipRadiusY = (coords.lip.radiusY || 20) * 1.25;
 
-      // 2. 점의 크기: 조금만 더 큼직하게 (약 3.2 ~ 4.6px)
-      const baseDotRadius = Math.max(3.2, scale * 0.022);
+      // 2. 점의 크기: 약간만 더 큼직하게 (약 4.2 ~ 5.6px)
+      const baseDotRadius = Math.max(4.2, scale * 0.028);
 
-      // 3. 일정한 패턴을 위한 최소 거리 간격 (얼굴 크기 비례: 약 15~22px)
-      //    코나 입 주변에 점이 뭉치지 않고 얼굴 전체에 균일한 간격 유지
-      const minSpacing = Math.max(14, scale * 0.088);
+      // 3. 일정한 패턴을 위한 최소 거리 간격 (점 크기 확대에 맞춰 자연스러운 간격 유지)
+      const minSpacing = Math.max(16, scale * 0.096);
       const minSpacingSq = minSpacing * minSpacing;
 
       // 4. 머리카락(헤어라인) 및 턱 바깥 침범 방지용 순수 얼굴 윤곽 Path
@@ -744,18 +743,19 @@ class BeautyFilterProcessor {
         });
       }
 
-      // 5. 점 렌더링: 은은하고 흐린 느낌의 소프트 펄 글로우 도트
+      // 5. 점 렌더링: 가우시안 블러 및 은은한 소프트 글로우 도트
       this.ctx.save();
 
-      // 바깥쪽 부드러운 소프트 글로우
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-      this.ctx.shadowBlur = Math.max(4, baseDotRadius * 1.5); // 흐리고 몽환적인 발광
+      // 전체 가우시안 블러 필터 적용 (테두리가 뽀얗고 몽환적으로 흐려짐)
+      this.ctx.filter = 'blur(2.4px)';
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
+      this.ctx.shadowBlur = Math.max(6, baseDotRadius * 1.8);
 
       this.ctx.beginPath();
       for (let i = 0; i < selectedPoints.length; i++) {
         const p = selectedPoints[i];
-        // 3D 깊이(z) 반영: 코/볼 중심은 조금 크고, 외곽으로 갈수록 자연스럽게 원근 축소
+        // 3D 깊이(z) 반영: 코/볼 중심은 조금 더 크고, 외곽으로 갈수록 자연스럽게 원근 축소
         const zFactor = Math.max(0.78, Math.min(1.22, 1.0 - (p.z || 0) * 1.8));
         const r = baseDotRadius * zFactor;
 
@@ -764,20 +764,8 @@ class BeautyFilterProcessor {
       }
       this.ctx.fill();
 
-      // 안쪽 은은한 코어 하이라이트 (너무 딱딱하지 않게 반투명 소프트 화이트로 채움)
-      this.ctx.shadowBlur = 0;
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      this.ctx.beginPath();
-      for (let i = 0; i < selectedPoints.length; i++) {
-        const p = selectedPoints[i];
-        const zFactor = Math.max(0.78, Math.min(1.22, 1.0 - (p.z || 0) * 1.8));
-        const r = (baseDotRadius * 0.5) * zFactor;
-
-        this.ctx.moveTo(p.x + r, p.y);
-        this.ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      }
-      this.ctx.fill();
-
+      // 블러 필터 해제
+      this.ctx.filter = 'none';
       this.ctx.restore();
     }
 
