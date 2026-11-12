@@ -45,6 +45,11 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Windows 작업표시줄 식별자 설정
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.beautycall.app');
+  }
+
   // 카메라/마이크 권한 요청 (macOS)
   if (process.platform === 'darwin') {
     await systemPreferences.askForMediaAccess('camera');

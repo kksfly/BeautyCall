@@ -1,12 +1,36 @@
 {
-  "name": "video_call_app",
+  "name": "beautycall",
+  "productName": "BeautyCall",
   "version": "1.0.0",
   "description": "다자간 화상 통화 및 뷰티 필터 데스크톱 앱",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "server": "node server/signaling.js",
-    "dev": "concurrently \"node server/signaling.js\" \"electron .\""
+    "dev": "concurrently \"node server/signaling.js\" \"electron .\"",
+    "build": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.beautycall.app",
+    "productName": "BeautyCall",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.png"
+    },
+    "portable": {
+      "artifactName": "${productName}_v${version}.${ext}"
+    },
+    "files": [
+      "!server/**",
+      "!README.md",
+      "!.git/**"
+    ],
+    "asarUnpack": [
+      "**/node_modules/@mediapipe/**"
+    ]
   },
   "keywords": [
     "webrtc",
@@ -24,6 +48,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "electron": "^34.2.0"
+    "electron": "^34.2.0",
+    "electron-builder": "^26.18.0"
   }
 }
