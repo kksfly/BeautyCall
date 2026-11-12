@@ -1137,8 +1137,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setJoinLoadingState(true);
     if (connectingStatusOverlay) {
       connectingStatusOverlay.classList.remove('hidden');
-      if (connectingStatusTitle) connectingStatusTitle.textContent = '방에 접속 중...';
-      if (connectingStatusSub) connectingStatusSub.textContent = '시그널링 서버 및 미디어 스트림을 연결하고 있습니다.';
+      if (connectingStatusTitle) connectingStatusTitle.textContent = 'Connecting to room...';
+      if (connectingStatusSub) connectingStatusSub.textContent = 'Connecting to signaling server and media streams...';
     }
     if (waitingPeerNotice) {
       waitingPeerNotice.classList.add('hidden');
@@ -1169,8 +1169,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       authKey: currentAccessKey,
       onConnected: () => {
         console.log('✅ 시그널링 서버 및 방 접속 성공!');
-        if (connectingStatusTitle) connectingStatusTitle.textContent = '방 접속 완료!';
-        if (connectingStatusSub) connectingStatusSub.textContent = '화상 통화 세션이 활성화되었습니다.';
+        if (connectingStatusTitle) connectingStatusTitle.textContent = 'Connected!';
+        if (connectingStatusSub) connectingStatusSub.textContent = 'Video call session is now active.';
         setTimeout(() => {
           if (connectingStatusOverlay) connectingStatusOverlay.classList.add('hidden');
           setJoinLoadingState(false);
