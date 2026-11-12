@@ -367,44 +367,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       titleLeft.className = 'special-card-title-left';
       titleLeft.innerHTML = `<span>${item.name}</span>`;
 
-      // 우측 순서 변경 컨트롤 (▲ / ▼ 및 드래그 핸들)
+      // 우측 순서 변경 컨트롤 (드래그 핸들 아이콘)
       const actions = document.createElement('div');
       actions.className = 'special-card-actions';
 
-      // 위/아래 이동 버튼 그룹
-      const orderBtnGroup = document.createElement('div');
-      orderBtnGroup.className = 'filter-order-btn-group';
-
-      const upBtn = document.createElement('button');
-      upBtn.className = 'filter-order-btn';
-      upBtn.title = '위로 이동';
-      upBtn.innerHTML = '▲';
-      if (index === 0) upBtn.disabled = true;
-      upBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        moveSpecialFilter(index, index - 1);
-      });
-
-      const downBtn = document.createElement('button');
-      downBtn.className = 'filter-order-btn';
-      downBtn.title = '아래로 이동';
-      downBtn.innerHTML = '▼';
-      if (index === items.length - 1) downBtn.disabled = true;
-      downBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        moveSpecialFilter(index, index + 1);
-      });
-
-      orderBtnGroup.appendChild(upBtn);
-      orderBtnGroup.appendChild(downBtn);
-
-      // 드래그 핸들 (데스크탑 마우스 드래그 힌트)
+      // 드래그 핸들 (마우스 드래그 힌트)
       const dragHandle = document.createElement('span');
       dragHandle.className = 'filter-drag-handle';
       dragHandle.title = '드래그하여 순서 변경';
       dragHandle.textContent = '⋮⋮';
 
-      actions.appendChild(orderBtnGroup);
       actions.appendChild(dragHandle);
 
       title.appendChild(titleLeft);

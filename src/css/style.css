@@ -408,62 +408,35 @@ body {
   white-space: nowrap;
 }
 
-/* 카드 우측 컨트롤 (AR 배지 + 위/아래 순서 이동 버튼 + 드래그 핸들) */
+/* 카드 우측 순서 변경 드래그 핸들 */
 .special-card-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
   flex-shrink: 0;
 }
 
 .filter-drag-handle {
   color: var(--text-muted);
   cursor: grab;
-  font-size: 13px;
-  padding: 0 2px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  font-size: 15px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: 0.65;
+  user-select: none;
+  letter-spacing: -1px;
+  line-height: 1;
+  transition: all 0.2s ease;
 }
 
 .filter-drag-handle:hover {
   opacity: 1;
   color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.08);
 }
 
-.filter-order-btn-group {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.filter-order-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--text-muted);
-  font-size: 10px;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 0;
-  line-height: 1;
-}
-
-.filter-order-btn:hover:not(:disabled) {
-  background: var(--accent-pink);
-  border-color: var(--accent-pink);
-  color: #fff;
-  transform: scale(1.1);
-}
-
-.filter-order-btn:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-  pointer-events: none;
+.special-filter-card:active .filter-drag-handle {
+  cursor: grabbing;
 }
 
 .special-filter-card.active .special-card-title {
