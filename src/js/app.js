@@ -122,9 +122,86 @@ document.addEventListener('DOMContentLoaded', async () => {
   let webrtcManager = null;
   let remoteUsersCount = 0;
 
+  // 시그널링 서버 주소
+  const SIGNALING_URL = 'https://beautycall-server.onrender.com';
+
   // 1. 뷰티 필터 엔진 인스턴스 (기본 프리셋: Facebook Messenger 스타일 The Best Makeup)
   const filterProcessor = new BeautyFilterProcessor();
   filterProcessor.setPreset('bestMakeup');
+
+  /**
+   * 서버에서 동적으로 내려받은 필터 목록을 UI 버튼으로 렌더링
+   */
+  function renderFilterButtons(config) {
+    if (!config) return;
+
+    filterProcessor.loadRemotePresets(config);
+
+    function createButtons(listElement, items, isSmall = false) {
+      if (!listElement) return;
+      listElement.innerHTML = '';
+
+      items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = `preset-btn ${isSmall ? 'in-call-preset' : ''}`;
+        btn.dataset.preset = item.id;
+        btn.textContent = item.name;
+
+        if (filterProcessor.settings.preset === item.id) {
+          btn.classList.add('active');
+        }
+
+        btn.addEventListener('click', () => {
+          filterProcessor.setPreset(item.id);
+
+          document.querySelectorAll(`[data-preset]`).forEach(b => {
+            b.classList.toggle('active', b.dataset.preset === item.id);
+          });
+
+          updateSliderDisplay();
+        });
+
+        listElement.appendChild(btn);
+      });
+    }
+
+    if (config.basic) {
+      createButtons(basicPresetsList, config.basic, false);
+      createButtons(inCallBasicPresetsList, config.basic, true);
+    }
+
+    if (config.special) {
+      createButtons(specialPresetsList, config.special, false);
+      createButtons(inCallSpecialPresetsList, config.special, true);
+    }
+
+    console.log('✨ 서버 필터 목록 UI 렌더링 완료');
+  }
+
+  // 앱 시작 시 시그널링 서버로부터 최신 필터 목록 자동 로드 (REST API)
+  fetch(`${SIGNALING_URL}/api/filters`)
+    .then(res => res.json())
+    .then(data => {
+      renderFilterButtons(data);
+      updateSliderDisplay();
+    })
+    .catch(err => {
+      console.warn('원격 필터 로드 실패(로컬 기본값 사용):', err);
+    });
+
+  // 대기실 소켓 연결 (실시간 필터 업데이트 이벤트 수신용)
+  if (typeof io !== 'undefined') {
+    const lobbySocket = io(SIGNALING_URL);
+    lobbySocket.on('filter-configs', (data) => {
+      renderFilterButtons(data);
+      updateSliderDisplay();
+    });
+    lobbySocket.on('filters-updated', (data) => {
+      console.log('📢 서버에서 필터가 업데이트되었습니다!');
+      renderFilterButtons(data);
+      updateSliderDisplay();
+    });
+  }
 
   // 프리뷰 및 로컬 화면 복사 동기화 루프
   function startSyncPreviewLoop() {

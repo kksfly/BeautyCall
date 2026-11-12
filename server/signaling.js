@@ -1,9 +1,136 @@
-// Socket.io 시그널링 서버 (Node.js 기본 http 모듈 사용, 외부 프레임워크 의존성 없음)
+// Socket.io 시그널링 서버 및 원격 필터 관리자
 const http = require('http');
 const { Server } = require('socket.io');
 
-// 기본 HTTP 서버 생성 (express 불필요)
+const PORT = process.env.PORT || 3500;
+const MAX_USERS_PER_ROOM = 4;
+
+// 🎨 중앙 관리 필터 설정 (서버에서 추가/수정 시 모든 클라이언트에 실시간 동기화)
+const FILTERS_CONFIG = {
+  version: '1.2.0',
+  basic: [
+    {
+      id: 'none',
+      name: 'Original',
+      settings: {
+        smoothing: 0, brightness: 100, contrast: 100, saturation: 100,
+        rosyTint: 0, eyeBrighten: 0, blush: 0, lipTint: 0, eyeliner: 0, highlighter: 0
+      }
+    },
+    {
+      id: 'smooth',
+      name: '🌸 Smooth',
+      settings: {
+        smoothing: 70, brightness: 110, contrast: 102, saturation: 106,
+        rosyTint: 25, eyeBrighten: 0, blush: 0, lipTint: 0, eyeliner: 0, highlighter: 0
+      }
+    },
+    {
+      id: 'kbeauty',
+      name: '✨ K-Beauty',
+      settings: {
+        smoothing: 80, brightness: 114, contrast: 100, saturation: 104,
+        rosyTint: 20, eyeBrighten: 35, blush: 35, lipTint: 45, eyeliner: 0, highlighter: 30
+      }
+    },
+    {
+      id: 'glamour',
+      name: '💄 Glamour',
+      settings: {
+        smoothing: 75, brightness: 112, contrast: 104, saturation: 110,
+        rosyTint: 15, eyeBrighten: 40, blush: 50, lipTint: 60, eyeliner: 0, highlighter: 0
+      }
+    },
+    {
+      id: 'warm',
+      name: '☀️ Warm',
+      settings: {
+        smoothing: 50, brightness: 106, contrast: 104, saturation: 115,
+        rosyTint: 30, eyeBrighten: 0, blush: 25, lipTint: 25, eyeliner: 0, highlighter: 0
+      }
+    },
+    {
+      id: 'cool',
+      name: '❄️ Cool',
+      settings: {
+        smoothing: 70, brightness: 114, contrast: 100, saturation: 98,
+        rosyTint: 15, eyeBrighten: 0, blush: 20, lipTint: 30, eyeliner: 0, highlighter: 0
+      }
+    },
+    {
+      id: 'vintage',
+      name: '🎞️ Vintage',
+      settings: {
+        smoothing: 40, brightness: 102, contrast: 112, saturation: 85,
+        rosyTint: 10, eyeBrighten: 0, blush: 0, lipTint: 0, eyeliner: 0, highlighter: 0
+      }
+    },
+    {
+      id: 'monochrome',
+      name: '🖤 Mono',
+      settings: {
+        smoothing: 60, brightness: 105, contrast: 115, saturation: 0,
+        rosyTint: 0, eyeBrighten: 0, blush: 0, lipTint: 0, eyeliner: 0, highlighter: 0
+      }
+    }
+  ],
+  special: [
+    {
+      id: 'bestMakeup',
+      name: '👑 Best Makeup',
+      settings: {
+        smoothing: 78, brightness: 112, contrast: 104, saturation: 110,
+        rosyTint: 15, eyeBrighten: 45, blush: 55, lipTint: 70, eyeliner: 65, highlighter: 55
+      }
+    },
+    {
+      id: 'idolMask',
+      name: '🎀 Idol Mask',
+      settings: {
+        smoothing: 82, brightness: 116, contrast: 102, saturation: 106,
+        rosyTint: 20, eyeBrighten: 50, blush: 45, lipTint: 60, eyeliner: 40, highlighter: 60
+      }
+    },
+    {
+      id: 'foxEyes',
+      name: '🦊 Fox Eyes',
+      settings: {
+        smoothing: 72, brightness: 108, contrast: 106, saturation: 108,
+        rosyTint: 10, eyeBrighten: 35, blush: 40, lipTint: 65, eyeliner: 80, highlighter: 45
+      }
+    },
+    {
+      id: 'goldenHour',
+      name: '🌟 Golden Hour',
+      settings: {
+        smoothing: 65, brightness: 110, contrast: 105, saturation: 118,
+        rosyTint: 35, eyeBrighten: 30, blush: 60, lipTint: 60, eyeliner: 45, highlighter: 65
+      }
+    }
+  ]
+};
+
+// HTTP 서버 (REST API 지원)
 const server = http.createServer((req, res) => {
+  // CORS 헤더 설정
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // 1. 최신 필터 설정 JSON API (/api/filters)
+  if (req.url === '/api/filters') {
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify(FILTERS_CONFIG));
+    return;
+  }
+
+  // 기본 상태 확인 페이지
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('BeautyCall Signaling Server is running.');
 });
@@ -15,14 +142,14 @@ const io = new Server(server, {
   }
 });
 
-const PORT = process.env.PORT || 3500;
-const MAX_USERS_PER_ROOM = 4;
-
-// 방별 참가자 정보: { [roomId]: { [socketId]: { nickname, joinedAt } } }
+// 방별 참가자 정보
 const rooms = {};
 
 io.on('connection', (socket) => {
   console.log(`[Connected] Socket ID: ${socket.id}`);
+
+  // 🌟 클라이언트 연결 시 즉시 최신 필터 설정 자동 전송
+  socket.emit('filter-configs', FILTERS_CONFIG);
 
   // 방 참가 요청
   socket.on('join-room', ({ roomId, nickname }) => {
@@ -36,21 +163,18 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 방에 사용자 등록
     rooms[roomId][socket.id] = {
       nickname: nickname || `User_${socket.id.substring(0, 4)}`,
       joinedAt: Date.now()
     };
     socket.join(roomId);
 
-    // 기존 참가자 목록을 방금 들어온 사용자에게 전달
     const existingUsers = currentUsers.map(id => ({
       socketId: id,
       nickname: rooms[roomId][id].nickname
     }));
     socket.emit('all-users', existingUsers);
 
-    // 기존 참가자들에게 새 사용자가 입장했음을 알림
     socket.to(roomId).emit('user-joined', {
       socketId: socket.id,
       nickname: rooms[roomId][socket.id].nickname
@@ -90,13 +214,11 @@ io.on('connection', (socket) => {
         const user = rooms[roomId][socket.id];
         delete rooms[roomId][socket.id];
 
-        // 방에 남은 다른 참가자들에게 퇴장 알림
         socket.to(roomId).emit('user-left', {
           socketId: socket.id,
           nickname: user.nickname
         });
 
-        // 방에 아무도 없으면 방 삭제
         if (Object.keys(rooms[roomId]).length === 0) {
           delete rooms[roomId];
         }

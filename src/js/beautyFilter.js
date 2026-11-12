@@ -271,6 +271,32 @@ class BeautyFilterProcessor {
     }
   }
 
+  /**
+   * 시그널링 서버로부터 내려받은 최신 필터 설정 적용
+   * @param {Object} config - { basic: [...], special: [...] }
+   */
+  loadRemotePresets(config) {
+    if (!config) return;
+
+    if (Array.isArray(config.basic)) {
+      this.basicPresets = {};
+      config.basic.forEach(item => {
+        this.basicPresets[item.id] = { ...item.settings };
+      });
+    }
+
+    if (Array.isArray(config.special)) {
+      this.specialPresets = {};
+      config.special.forEach(item => {
+        this.specialPresets[item.id] = { ...item.settings };
+      });
+    }
+
+    // 현재 적용 중인 프리셋 재적용
+    this.setPreset(this.settings.preset);
+    console.log('✅ 서버로부터 최신 필터 프리셋 동기화 완료');
+  }
+
   start(videoElement) {
     this.videoElement = videoElement;
     this.isRunning = true;
