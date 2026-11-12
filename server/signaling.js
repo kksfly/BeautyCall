@@ -245,6 +245,16 @@ const FILTERS_CONFIG = {
         smoothing: 80, brightness: 110, contrast: 104, saturation: 108,
         rosyTint: 15, eyeBrighten: 45, blush: 25, lipTint: 30
       }
+    },
+    {
+      id: 'hotdog',
+      name: '🌭 Hotdog on Head',
+      desc: 'Delicious & cute hotdog balancing on your head tracking your movements!',
+      specialType: 'hotdog',
+      settings: {
+        smoothing: 82, brightness: 114, contrast: 103, saturation: 112,
+        rosyTint: 20, eyeBrighten: 45, blush: 60, lipTint: 70
+      }
     }
   ]
 };

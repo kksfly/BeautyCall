@@ -140,6 +140,18 @@ class BeautyFilterProcessor {
         eyeBrighten: 45,
         blush: 25,
         lipTint: 30
+      },
+      hotdog: {
+        specialType: 'hotdog',
+        smoothing: 82,      // 뽀샤시 도자기 피부
+        brightness: 114,
+        contrast: 103,
+        saturation: 112,
+        rosyTint: 20,
+        vignette: false,
+        eyeBrighten: 45,
+        blush: 60,          // 귀여운 핑크 볼터치
+        lipTint: 70         // 로즈 립
       }
     };
 
@@ -767,6 +779,38 @@ class BeautyFilterProcessor {
       // 블러 필터 해제
       this.ctx.filter = 'none';
       this.ctx.restore();
+    }
+
+    // 6. 🌭 머리 위의 귀여운 핫도그 (Hotdog on Head)
+    else if (type === 'hotdog') {
+      const propY = headTop.y - scale * 0.35;
+      this.ctx.translate(headTop.x, propY);
+      this.ctx.rotate(angle);
+
+      const propSize = scale * 1.05; // 머리 위에 알맞은 크기의 핫도그
+
+      // 입체적인 그림자
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      this.ctx.shadowBlur = 12;
+      this.ctx.shadowOffsetY = 7;
+
+      this.ctx.font = `${Math.round(propSize)}px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Apple Color Emoji"`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('🌭', 0, 0);
+
+      // 따끈따끈 모락모락 김 & 귀여운 반짝이 파티클
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetY = 0;
+
+      // 모락모락 김 (상단)
+      this.ctx.font = `${Math.round(propSize * 0.32)}px sans-serif`;
+      this.ctx.fillText('♨️', 0, -propSize * 0.45);
+
+      // 반짝이는 별빛 파티클
+      this.ctx.font = `${Math.round(propSize * 0.28)}px sans-serif`;
+      this.ctx.fillText('✨', propSize * 0.5, -propSize * 0.2);
+      this.ctx.fillText('⭐', -propSize * 0.5, -propSize * 0.25);
     }
 
     this.ctx.restore();

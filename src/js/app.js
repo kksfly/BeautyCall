@@ -401,7 +401,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             { id: 'catEars', name: '🐱 Cute Kitty', desc: 'Porcelain skin + adorable pink cat ears, whiskers and jelly nose.' },
             { id: 'crown', name: '👑 Royal Crown', desc: 'Luminous royal glam + a glowing golden crown on your head with sparkling stars.' },
             { id: 'sunglasses', name: '🕶️ Cool Shades', desc: 'Sleek beauty skin + cool dark sunglasses fitting right on your eyes.' },
-            { id: 'dotMask', name: '⚪ Cyber Dot Mask', desc: 'Hypnotic matrix dots covering your face with crystal clear eyes.' }
+            { id: 'dotMask', name: '⚪ Cyber Dot Mask', desc: 'Hypnotic matrix dots covering your face with crystal clear eyes.' },
+            { id: 'hotdog', name: '🌭 Hotdog on Head', desc: 'Delicious & cute hotdog balancing on your head tracking your movements!' }
           ]
         };
         renderFilterButtons(localConfig);
