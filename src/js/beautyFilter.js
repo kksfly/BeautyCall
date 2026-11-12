@@ -1328,22 +1328,22 @@ class BeautyFilterProcessor {
   }
 
   /**
-   * ✨ 자연스럽고 투명한 입체 물광 윤광 하이라이터 (자연스러운 샴페인 글로우)
+   * ✨ 또렷하면서도 피부에 자연스럽게 스며드는 입체 물광 하이라이터 & 샴페인 글로우
    */
   applyHighlighterAndGlow(width, height, intensity, coords) {
     const lm = this.landmarks;
-    if (!lm) return;
+    if (!lm || intensity <= 0) return;
 
     this.ctx.save();
-    // 💡 피부 톤과 부드럽게 융합되는 soft-light 블렌딩 (흰 페인트 현상 방지)
+    // 💡 피부 톤과 부드럽게 융합되어 얼룩 없이 투명하게 빛나는 soft-light 블렌딩
     this.ctx.globalCompositeOperation = 'soft-light';
 
     const eyeScale = coords.scale;
-    // 과도한 인위성을 방지하기 위해 자연스러운 유효 강도 계수 적용 (최대 0.28)
-    const naturalAlpha = Math.min(0.28, intensity * 0.26);
+    // 슬라이더 강도(0~1)를 확실하게 체감할 수 있는 쾌적한 알파 곡선 (최대 0.85)
+    const glowAlpha = Math.min(0.9, intensity * 0.85);
 
-    // 1. 콧대(Nose Bridge) 자연스러운 세로 윤광
-    // 미간(168)부터 콧등(195)까지 콧대를 슬림하고 오똑하게 비추는 부드러운 그라데이션
+    // 1. 오똑한 콧대(Nose Bridge) 세로 입체 윤광
+    // 미간(168)부터 콧등(195, 5)까지 콧대를 또렷하고 오똑하게 비추는 그라데이션
     const bridgeTopX = lm[168].x * width;
     const bridgeTopY = lm[168].y * height;
     const bridgeBotX = lm[195].x * width;
@@ -1351,35 +1351,35 @@ class BeautyFilterProcessor {
     const bridgeMidX = (bridgeTopX + bridgeBotX) / 2;
     const bridgeMidY = (bridgeTopY + bridgeBotY) / 2;
     const bridgeLen = Math.hypot(bridgeBotX - bridgeTopX, bridgeBotY - bridgeTopY);
-    const bridgeW = Math.max(3, eyeScale * 0.08);
+    const bridgeW = Math.max(5, eyeScale * 0.11);
 
     this.ctx.save();
-    this.ctx.filter = 'blur(6px)';
+    this.ctx.filter = 'blur(3.5px)';
     this.ctx.translate(bridgeMidX, bridgeMidY);
     this.ctx.rotate(coords.angle);
 
-    const bridgeGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(bridgeW, bridgeLen * 0.5));
-    bridgeGrad.addColorStop(0, `rgba(255, 245, 235, ${naturalAlpha * 1.4})`);
-    bridgeGrad.addColorStop(0.5, `rgba(255, 240, 230, ${naturalAlpha * 0.7})`);
-    bridgeGrad.addColorStop(1, 'rgba(255, 240, 230, 0)');
+    const bridgeGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(bridgeW, bridgeLen * 0.55));
+    bridgeGrad.addColorStop(0, `rgba(255, 255, 250, ${glowAlpha * 1.0})`);
+    bridgeGrad.addColorStop(0.45, `rgba(255, 245, 235, ${glowAlpha * 0.65})`);
+    bridgeGrad.addColorStop(1, 'rgba(255, 245, 235, 0)');
 
     this.ctx.fillStyle = bridgeGrad;
     this.ctx.beginPath();
-    this.ctx.ellipse(0, 0, bridgeW * 0.8, bridgeLen * 0.55, 0, 0, Math.PI * 2);
+    this.ctx.ellipse(0, 0, bridgeW * 0.75, bridgeLen * 0.6, 0, 0, Math.PI * 2);
     this.ctx.fill();
     this.ctx.restore();
 
-    // 2. 코끝(Nose Tip) 은은한 물광 터치 (하얀 점 대신 부드러운 광채)
+    // 2. 코끝(Nose Tip) 앙증맞은 오똑 포인트 하이라이트 (코끝 4번)
     const tipX = lm[4].x * width;
     const tipY = lm[4].y * height;
-    const tipR = Math.max(4, eyeScale * 0.09);
+    const tipR = Math.max(4.5, eyeScale * 0.088);
 
     this.ctx.save();
-    this.ctx.filter = 'blur(4px)';
+    this.ctx.filter = 'blur(3px)';
     const tipGrad = this.ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, tipR);
-    tipGrad.addColorStop(0, `rgba(255, 248, 240, ${naturalAlpha * 1.2})`);
-    tipGrad.addColorStop(0.6, `rgba(255, 242, 232, ${naturalAlpha * 0.4})`);
-    tipGrad.addColorStop(1, 'rgba(255, 240, 230, 0)');
+    tipGrad.addColorStop(0, `rgba(255, 255, 252, ${glowAlpha * 0.95})`);
+    tipGrad.addColorStop(0.5, `rgba(255, 245, 235, ${glowAlpha * 0.5})`);
+    tipGrad.addColorStop(1, 'rgba(255, 245, 235, 0)');
 
     this.ctx.fillStyle = tipGrad;
     this.ctx.beginPath();
@@ -1387,18 +1387,18 @@ class BeautyFilterProcessor {
     this.ctx.fill();
     this.ctx.restore();
 
-    // 3. 양쪽 광대 C존(Cheekbones) 촉촉한 펄 물광 (넓고 부드러운 페더링)
+    // 3. 양쪽 광대 C존(Cheekbones) 촉촉한 펄 물광 글로우
     const drawCheekGlow = (landmarkIdx) => {
       const cx = lm[landmarkIdx].x * width;
       const cy = lm[landmarkIdx].y * height;
       const r = eyeScale * 0.32;
 
       this.ctx.save();
-      this.ctx.filter = 'blur(8px)';
+      this.ctx.filter = 'blur(5px)';
       const cheekGrad = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      cheekGrad.addColorStop(0, `rgba(255, 248, 238, ${naturalAlpha * 0.9})`);
-      cheekGrad.addColorStop(0.5, `rgba(255, 240, 230, ${naturalAlpha * 0.35})`);
-      cheekGrad.addColorStop(1, 'rgba(255, 240, 230, 0)');
+      cheekGrad.addColorStop(0, `rgba(255, 250, 242, ${glowAlpha * 0.85})`);
+      cheekGrad.addColorStop(0.5, `rgba(255, 242, 232, ${glowAlpha * 0.4})`);
+      cheekGrad.addColorStop(1, 'rgba(255, 242, 232, 0)');
 
       this.ctx.fillStyle = cheekGrad;
       this.ctx.beginPath();
@@ -1410,17 +1410,18 @@ class BeautyFilterProcessor {
     if (lm[116]) drawCheekGlow(116);
     if (lm[345]) drawCheekGlow(345);
 
-    // 4. 이마 중앙(Forehead) 맑은 볼륨 입체감 (넓게 퍼지는 부드러운 빛)
+    // 4. 이마 중앙(Forehead) 은은한 볼륨 입체감 (151번)
     if (lm[151]) {
       const fx = lm[151].x * width;
       const fy = lm[151].y * height;
       const fr = eyeScale * 0.38;
 
       this.ctx.save();
-      this.ctx.filter = 'blur(10px)';
+      this.ctx.filter = 'blur(6px)';
       const fGrad = this.ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
-      fGrad.addColorStop(0, `rgba(255, 245, 235, ${naturalAlpha * 0.8})`);
-      fGrad.addColorStop(1, 'rgba(255, 245, 235, 0)');
+      fGrad.addColorStop(0, `rgba(255, 248, 238, ${glowAlpha * 0.7})`);
+      fGrad.addColorStop(0.6, `rgba(255, 248, 238, ${glowAlpha * 0.3})`);
+      fGrad.addColorStop(1, 'rgba(255, 248, 238, 0)');
 
       this.ctx.fillStyle = fGrad;
       this.ctx.beginPath();
