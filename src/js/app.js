@@ -127,9 +127,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 시그널링 서버 주소
   const SIGNALING_URL = 'https://beautycall-server.onrender.com';
 
-  // 1. 뷰티 필터 엔진 인스턴스 (기본 프리셋: Facebook Messenger 스타일 The Best Makeup)
+  // 1. 뷰티 필터 엔진 인스턴스 (기본 프리셋: 💩 Poop on Head AR 마스크)
   const filterProcessor = new BeautyFilterProcessor();
-  filterProcessor.setPreset('bestMakeup');
+  filterProcessor.setPreset('poop');
 
   /**
    * 서버에서 동적으로 내려받은 필터 목록을 UI 버튼으로 렌더링

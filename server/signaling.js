@@ -76,39 +76,43 @@ const FILTERS_CONFIG = {
   ],
   special: [
     {
-      id: 'bestMakeup',
-      name: '👑 The Best Makeup',
-      desc: 'Facebook Messenger style full glam with winged eyeliner, 3D strobing glow & velvet lips.',
+      id: 'poop',
+      name: '💩 Poop on Head',
+      desc: 'Flawless beauty skin + a cute funny poop on your head tracking your movement!',
+      specialType: 'poop',
       settings: {
-        smoothing: 78, brightness: 112, contrast: 104, saturation: 110,
-        rosyTint: 15, eyeBrighten: 45, blush: 55, lipTint: 70, eyeliner: 65, highlighter: 55
+        smoothing: 82, brightness: 114, contrast: 103, saturation: 112,
+        rosyTint: 20, eyeBrighten: 45, blush: 65, lipTint: 70
       }
     },
     {
-      id: 'idolMask',
-      name: '🎀 Idol Stage Mask',
-      desc: 'Radiant K-Pop idol stage look with luminous skin, soft lashes & coral pink lips.',
+      id: 'catEars',
+      name: '🐱 Cute Kitty',
+      desc: 'Porcelain skin + adorable pink cat ears, whiskers and jelly nose.',
+      specialType: 'catEars',
       settings: {
-        smoothing: 82, brightness: 116, contrast: 102, saturation: 106,
-        rosyTint: 20, eyeBrighten: 50, blush: 45, lipTint: 60, eyeliner: 40, highlighter: 60
+        smoothing: 85, brightness: 116, contrast: 102, saturation: 110,
+        rosyTint: 25, eyeBrighten: 50, blush: 60, lipTint: 65
       }
     },
     {
-      id: 'foxEyes',
-      name: '🦊 Fox Eyes Glam',
-      desc: 'Sharp cat-eye winged liner with sleek contouring and defined eye contours.',
+      id: 'crown',
+      name: '👑 Royal Crown',
+      desc: 'Luminous royal glam + a glowing golden crown on your head with sparkling stars.',
+      specialType: 'crown',
       settings: {
-        smoothing: 72, brightness: 108, contrast: 106, saturation: 108,
-        rosyTint: 10, eyeBrighten: 35, blush: 40, lipTint: 65, eyeliner: 80, highlighter: 45
+        smoothing: 80, brightness: 115, contrast: 104, saturation: 114,
+        rosyTint: 15, eyeBrighten: 45, blush: 50, lipTint: 75
       }
     },
     {
-      id: 'goldenHour',
-      name: '🌟 Golden Hour Glow',
-      desc: 'Warm amber sunset bronzing with sun-kissed peach blush and golden radiance.',
+      id: 'sunglasses',
+      name: '🕶️ Cool Shades',
+      desc: 'Sleek beauty skin + cool dark sunglasses fitting right on your eyes.',
+      specialType: 'sunglasses',
       settings: {
-        smoothing: 65, brightness: 110, contrast: 105, saturation: 118,
-        rosyTint: 35, eyeBrighten: 30, blush: 60, lipTint: 60, eyeliner: 45, highlighter: 65
+        smoothing: 75, brightness: 110, contrast: 106, saturation: 108,
+        rosyTint: 10, eyeBrighten: 30, blush: 40, lipTint: 60
       }
     }
   ]

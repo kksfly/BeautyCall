@@ -1,7 +1,7 @@
 /**
- * 실시간 뷰티 및 메이크업 필터 프로세서
- * - Basic Filters (기본 뷰티 & 색감)
- * - Special Filters (Facebook Messenger 스타일 The Best Makeup 등 고급 AR 마스크)
+ * 실시간 뷰티 및 드라마틱 AR 스페셜 마스크 필터 프로세서
+ * - Basic Filters: 기본 뷰티 (스킨 스무딩, 톤업, 색감 프리셋)
+ * - Special Filters: 극강 뽀샤시 뷰티 + 머리/얼굴 움직임을 따라다니는 재미있는 3D AR 스티커 (머리 위 똥 💩, 고양이 귀 🐱, 황금 왕관 👑, 선글라스 🕶️)
  */
 class BeautyFilterProcessor {
   constructor() {
@@ -20,182 +20,113 @@ class BeautyFilterProcessor {
 
     // 현재 설정값
     this.settings = {
-      category: 'special',  // 'basic' | 'special'
-      preset: 'bestMakeup',
-      smoothing: 78,
-      brightness: 112,
-      contrast: 104,
+      category: 'special',
+      preset: 'poop',
+      specialType: 'poop', // 'poop' | 'catEars' | 'crown' | 'sunglasses' | null
+      smoothing: 80,       // 스페셜 필터는 기본적으로 극강 뽀샤시 탑재
+      brightness: 114,
+      contrast: 102,
       saturation: 110,
-      rosyTint: 15,
+      rosyTint: 20,
       vignette: false,
-      eyeBrighten: 45,
-      blush: 55,
-      lipTint: 70,
-      eyeliner: 65,
-      highlighter: 55
+      eyeBrighten: 40,
+      blush: 60,           // 사랑스러운 볼터치
+      lipTint: 70          // 생기 립 틴트
     };
 
-    // 1. Basic Filters (기본 필터)
+    // 1. Basic Filters
     this.basicPresets = {
       none: {
-        smoothing: 0,
-        brightness: 100,
-        contrast: 100,
-        saturation: 100,
-        rosyTint: 0,
-        vignette: false,
-        eyeBrighten: 0,
-        blush: 0,
-        lipTint: 0,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 0, brightness: 100, contrast: 100, saturation: 100,
+        rosyTint: 0, vignette: false, eyeBrighten: 0, blush: 0, lipTint: 0
       },
       smooth: {
-        smoothing: 70,
-        brightness: 110,
-        contrast: 102,
-        saturation: 106,
-        rosyTint: 25,
-        vignette: false,
-        eyeBrighten: 0,
-        blush: 0,
-        lipTint: 0,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 70, brightness: 110, contrast: 102, saturation: 106,
+        rosyTint: 25, vignette: false, eyeBrighten: 0, blush: 0, lipTint: 0
       },
       kbeauty: {
-        smoothing: 80,
-        brightness: 114,
-        contrast: 100,
-        saturation: 104,
-        rosyTint: 20,
-        vignette: false,
-        eyeBrighten: 35,
-        blush: 35,
-        lipTint: 45,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 80, brightness: 114, contrast: 100, saturation: 104,
+        rosyTint: 20, vignette: false, eyeBrighten: 35, blush: 35, lipTint: 45
       },
       glamour: {
-        smoothing: 75,
-        brightness: 112,
-        contrast: 104,
-        saturation: 110,
-        rosyTint: 15,
-        vignette: false,
-        eyeBrighten: 40,
-        blush: 50,
-        lipTint: 60,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 75, brightness: 112, contrast: 104, saturation: 110,
+        rosyTint: 15, vignette: false, eyeBrighten: 40, blush: 50, lipTint: 60
       },
       warm: {
-        smoothing: 50,
-        brightness: 106,
-        contrast: 104,
-        saturation: 115,
-        rosyTint: 30,
-        vignette: false,
-        eyeBrighten: 0,
-        blush: 25,
-        lipTint: 25,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 50, brightness: 106, contrast: 104, saturation: 115,
+        rosyTint: 30, vignette: false, eyeBrighten: 0, blush: 25, lipTint: 25
       },
       cool: {
-        smoothing: 70,
-        brightness: 114,
-        contrast: 100,
-        saturation: 98,
-        rosyTint: 15,
-        vignette: false,
-        eyeBrighten: 0,
-        blush: 20,
-        lipTint: 30,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 70, brightness: 114, contrast: 100, saturation: 98,
+        rosyTint: 15, vignette: false, eyeBrighten: 0, blush: 20, lipTint: 30
       },
       vintage: {
-        smoothing: 40,
-        brightness: 102,
-        contrast: 112,
-        saturation: 85,
-        rosyTint: 10,
-        vignette: true,
-        eyeBrighten: 0,
-        blush: 0,
-        lipTint: 0,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 40, brightness: 102, contrast: 112, saturation: 85,
+        rosyTint: 10, vignette: true, eyeBrighten: 0, blush: 0, lipTint: 0
       },
       monochrome: {
-        smoothing: 60,
-        brightness: 105,
-        contrast: 115,
-        saturation: 0,
-        rosyTint: 0,
-        vignette: true,
-        eyeBrighten: 0,
-        blush: 0,
-        lipTint: 0,
-        eyeliner: 0,
-        highlighter: 0
+        specialType: null,
+        smoothing: 60, brightness: 105, contrast: 115, saturation: 0,
+        rosyTint: 0, vignette: true, eyeBrighten: 0, blush: 0, lipTint: 0
       }
     };
 
-    // 2. Special Filters (스페셜 AR 메이크업 마스크)
+    // 2. Special Filters (얼굴 뷰티 + 재미있는 3D AR 소품 장착)
     this.specialPresets = {
-      bestMakeup: {
-        smoothing: 78,      // 무결점 도자기 피부
-        brightness: 112,
-        contrast: 104,
+      poop: {
+        specialType: 'poop',
+        smoothing: 82,      // 도자기 피부
+        brightness: 114,
+        contrast: 103,
+        saturation: 112,
+        rosyTint: 20,
+        vignette: false,
+        eyeBrighten: 45,
+        blush: 65,          // 수줍은 핑크 볼터치
+        lipTint: 70         // 로즈 립
+      },
+      catEars: {
+        specialType: 'catEars',
+        smoothing: 85,      // 뽀샤시 고양이
+        brightness: 116,
+        contrast: 102,
         saturation: 110,
+        rosyTint: 25,
+        vignette: false,
+        eyeBrighten: 50,
+        blush: 60,
+        lipTint: 65
+      },
+      crown: {
+        specialType: 'crown',
+        smoothing: 80,      // 우아한 로열 뷰티
+        brightness: 115,
+        contrast: 104,
+        saturation: 114,
         rosyTint: 15,
         vignette: false,
         eyeBrighten: 45,
-        blush: 55,          // 화사한 피치 블러셔
-        lipTint: 70,        // 매혹적인 벨벳 로즈 립
-        eyeliner: 65,       // 그윽한 소프트 윙 아이라인
-        highlighter: 55     // 3D 콧대/광대 윤광 하이라이터
+        blush: 50,
+        lipTint: 75
       },
-      idolMask: {
-        smoothing: 82,      // 투명하고 깨끗한 아이돌 무대 피부
-        brightness: 116,
-        contrast: 102,
-        saturation: 106,
-        rosyTint: 20,
-        vignette: false,
-        eyeBrighten: 50,
-        blush: 45,          // 러블리 핑크 치크
-        lipTint: 60,        // 촉촉한 코랄 핑크 립
-        eyeliner: 40,       // 자연스러운 속눈썹 라인
-        highlighter: 60     // 화사한 샴페인 스트로빙
-      },
-      foxEyes: {
-        smoothing: 72,
-        brightness: 108,
+      sunglasses: {
+        specialType: 'sunglasses',
+        smoothing: 75,      // 힙합 쿨 뷰티
+        brightness: 110,
         contrast: 106,
         saturation: 108,
         rosyTint: 10,
         vignette: false,
-        eyeBrighten: 35,
-        blush: 40,
-        lipTint: 65,
-        eyeliner: 80,       // 날렵하고 섹시한 캣츠아이 윙
-        highlighter: 45
-      },
-      goldenHour: {
-        smoothing: 65,
-        brightness: 110,
-        contrast: 105,
-        saturation: 118,
-        rosyTint: 35,       // 노을빛 따스한 엠버 틴트
-        vignette: false,
         eyeBrighten: 30,
-        blush: 60,          // 웜 골드 브론징 블러셔
-        lipTint: 60,        // 누드 로즈 립
-        eyeliner: 45,
-        highlighter: 65     // 골든 하이라이트
+        blush: 40,
+        lipTint: 60
       }
     };
 
@@ -205,8 +136,6 @@ class BeautyFilterProcessor {
       397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
       172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
     ];
-    this.leftEyeTopIndices = [33, 246, 161, 160, 159, 158, 157, 173, 133];
-    this.rightEyeTopIndices = [263, 466, 388, 387, 386, 385, 384, 398, 362];
     this.outerLipIndices = [
       61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291,
       375, 321, 405, 314, 17, 84, 181, 91, 146
@@ -271,28 +200,23 @@ class BeautyFilterProcessor {
     }
   }
 
-  /**
-   * 시그널링 서버로부터 내려받은 최신 필터 설정 적용
-   * @param {Object} config - { basic: [...], special: [...] }
-   */
   loadRemotePresets(config) {
     if (!config) return;
 
     if (Array.isArray(config.basic)) {
       this.basicPresets = {};
       config.basic.forEach(item => {
-        this.basicPresets[item.id] = { ...item.settings };
+        this.basicPresets[item.id] = { specialType: null, ...item.settings };
       });
     }
 
     if (Array.isArray(config.special)) {
       this.specialPresets = {};
       config.special.forEach(item => {
-        this.specialPresets[item.id] = { ...item.settings };
+        this.specialPresets[item.id] = { specialType: item.specialType || item.id, ...item.settings };
       });
     }
 
-    // 현재 적용 중인 프리셋 재적용
     this.setPreset(this.settings.preset);
     console.log('✅ 서버로부터 최신 필터 프리셋 동기화 완료');
   }
@@ -329,7 +253,7 @@ class BeautyFilterProcessor {
       if (this.videoElement && this.videoElement.readyState >= 2) {
         updateDimensions();
 
-        if (this.faceMesh && !this.isDetectingFace && (time - lastDetectionTime > 50)) {
+        if (this.faceMesh && !this.isDetectingFace && (time - lastDetectionTime > 45)) {
           this.isDetectingFace = true;
           lastDetectionTime = time;
           this.faceMesh.send({ image: this.videoElement }).finally(() => {
@@ -390,8 +314,20 @@ class BeautyFilterProcessor {
     const lipX = ((lm[13]?.x ?? 0.5) + (lm[14]?.x ?? 0.5)) * 0.5 * width;
     const lipY = ((lm[13]?.y ?? 0.65) + (lm[14]?.y ?? 0.65)) * 0.5 * height;
 
+    // 얼굴 기울기 각도 (Roll Angle)
+    const angle = Math.atan2(rightEyeY - leftEyeY, rightEyeX - leftEyeX);
+
+    // 얼굴 크기 (Scale)
     const eyeDist = Math.hypot(rightEyeX - leftEyeX, rightEyeY - leftEyeY);
-    const faceScale = Math.max(25, eyeDist);
+    const faceScale = Math.max(30, eyeDist);
+
+    // 머리 정수리 위치 (랜드마크 10번)
+    const headTopX = lm[10].x * width;
+    const headTopY = lm[10].y * height;
+
+    // 코 끝 위치 (랜드마크 4번)
+    const noseX = lm[4].x * width;
+    const noseY = lm[4].y * height;
 
     return {
       leftEye: { x: leftEyeX, y: leftEyeY, radius: faceScale * 0.35 },
@@ -399,6 +335,9 @@ class BeautyFilterProcessor {
       leftCheek: { x: leftCheekX, y: leftCheekY, radius: faceScale * 0.5 },
       rightCheek: { x: rightCheekX, y: rightCheekY, radius: faceScale * 0.5 },
       lip: { x: lipX, y: lipY, radiusX: faceScale * 0.38, radiusY: faceScale * 0.18 },
+      headTop: { x: headTopX, y: headTopY },
+      nose: { x: noseX, y: noseY },
+      angle,
       scale: faceScale
     };
   }
@@ -409,36 +348,28 @@ class BeautyFilterProcessor {
 
     const {
       smoothing, brightness, contrast, saturation, rosyTint,
-      vignette, eyeBrighten, blush, lipTint, eyeliner, highlighter
+      vignette, eyeBrighten, blush, lipTint, specialType
     } = this.settings;
 
     const filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
 
-    // 메인 선명한 원본 영상 렌더링
+    // 1. 메인 선명한 원본 영상 렌더링
     this.ctx.filter = filterString;
     this.ctx.drawImage(this.videoElement, 0, 0, width, height);
     this.ctx.filter = 'none';
 
     const coords = this.getFaceCoordinates(width, height);
 
-    // 얼굴 전용 피부 스무딩
+    // 2. 얼굴 전용 스킨 스무딩 (도자기 피부)
     if (smoothing > 0 && coords && this.landmarks) {
       this.applyFaceOnlySmoothing(width, height, filterString, smoothing, coords);
     }
 
-    // AR 메이크업 효과
+    // 3. 뷰티 메이크업 (치크 블러셔, 립 틴트, 눈가 브라이트닝)
     if (coords && this.landmarks) {
-      if (highlighter > 0) {
-        this.applyHighlighter(width, height, (highlighter / 100) * 0.45, coords);
-      }
-
       if (blush > 0) {
-        this.applyCheekBlush(coords.leftCheek, (blush / 100) * 0.35);
-        this.applyCheekBlush(coords.rightCheek, (blush / 100) * 0.35);
-      }
-
-      if (eyeliner > 0) {
-        this.applyEyeliner(width, height, (eyeliner / 100) * 0.65, coords.scale);
+        this.applyCheekBlush(coords.leftCheek, (blush / 100) * 0.38);
+        this.applyCheekBlush(coords.rightCheek, (blush / 100) * 0.38);
       }
 
       if (eyeBrighten > 0) {
@@ -449,8 +380,14 @@ class BeautyFilterProcessor {
       if (lipTint > 0) {
         this.applyContouredLipTint(width, height, (lipTint / 100) * 0.45);
       }
+
+      // 4. 🎭 Special Filters: 머리/얼굴 움직임을 따라다니는 재미있는 3D AR 스티커 렌더링
+      if (specialType) {
+        this.renderDramaticSpecialProps(width, height, coords, specialType);
+      }
     }
 
+    // 5. 전체 핑크 생기 틴트
     if (rosyTint > 0) {
       this.ctx.save();
       this.ctx.globalCompositeOperation = 'soft-light';
@@ -459,6 +396,7 @@ class BeautyFilterProcessor {
       this.ctx.restore();
     }
 
+    // 6. 비네팅
     if (vignette) {
       this.ctx.save();
       const gradient = this.ctx.createRadialGradient(
@@ -471,6 +409,136 @@ class BeautyFilterProcessor {
       this.ctx.fillRect(0, 0, width, height);
       this.ctx.restore();
     }
+  }
+
+  /**
+   * 🎭 드라마틱한 스페셜 AR 소품/스티커 실시간 렌더링 (얼굴 각도 및 크기 완벽 추적)
+   */
+  renderDramaticSpecialProps(width, height, coords, type) {
+    const { headTop, angle, scale, leftEye, rightEye, nose, leftCheek, rightCheek } = coords;
+
+    this.ctx.save();
+
+    // 1. 💩 머리 위의 귀여운 똥 (Poop on Head)
+    if (type === 'poop') {
+      // 머리 정수리 위쪽으로 이동 및 머리 기울기 각도 회전
+      const propY = headTop.y - scale * 0.35;
+      this.ctx.translate(headTop.x, propY);
+      this.ctx.rotate(angle);
+
+      const propSize = scale * 0.95; // 얼굴 크기에 비례하는 큼직하고 재미있는 크기
+
+      this.ctx.font = `${Math.round(propSize)}px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Apple Color Emoji"`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      // 그림자 효과로 입체감 부여
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowOffsetY = 6;
+
+      this.ctx.fillText('💩', 0, 0);
+
+      // 머리 위에 떠 있는 작은 반짝임 파티클들
+      this.ctx.shadowBlur = 0;
+      this.ctx.font = `${Math.round(propSize * 0.3)}px sans-serif`;
+      this.ctx.fillText('✨', propSize * 0.45, -propSize * 0.25);
+      this.ctx.fillText('💫', -propSize * 0.45, -propSize * 0.15);
+    }
+
+    // 2. 🐱 귀여운 고양이 귀 & 수염 (Cute Cat Ears & Whiskers)
+    else if (type === 'catEars') {
+      // 머리 정수리 기준 고양이 귀
+      this.ctx.translate(headTop.x, headTop.y - scale * 0.15);
+      this.ctx.rotate(angle);
+
+      const earDist = scale * 0.65;
+      const earSize = scale * 0.55;
+
+      this.ctx.font = `${Math.round(earSize)}px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji"`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      // 왼쪽 핑크 귀 & 오른쪽 핑크 귀
+      this.ctx.fillText('🌸', -earDist, -earSize * 0.3);
+      this.ctx.fillText('🌸', earDist, -earSize * 0.3);
+
+      this.ctx.restore();
+      this.ctx.save();
+
+      // 코 중심 핑크 젤리 코
+      this.ctx.fillStyle = 'rgba(255, 130, 165, 0.85)';
+      this.ctx.beginPath();
+      this.ctx.arc(nose.x, nose.y, scale * 0.08, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // 양 볼 깜찍한 고양이 수염 3줄씩
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      this.ctx.lineWidth = Math.max(2, scale * 0.035);
+      this.ctx.lineCap = 'round';
+
+      // 왼쪽 수염 3가닥
+      const wLen = scale * 0.45;
+      [-0.15, 0, 0.15].forEach(dy => {
+        this.ctx.beginPath();
+        this.ctx.moveTo(leftCheek.x - scale * 0.1, leftCheek.y + dy * scale);
+        this.ctx.lineTo(leftCheek.x - scale * 0.1 - wLen, leftCheek.y + dy * scale * 1.6);
+        this.ctx.stroke();
+      });
+
+      // 오른쪽 수염 3가닥
+      [-0.15, 0, 0.15].forEach(dy => {
+        this.ctx.beginPath();
+        this.ctx.moveTo(rightCheek.x + scale * 0.1, rightCheek.y + dy * scale);
+        this.ctx.lineTo(rightCheek.x + scale * 0.1 + wLen, rightCheek.y + dy * scale * 1.6);
+        this.ctx.stroke();
+      });
+    }
+
+    // 3. 👑 황금 왕관 (Royal Crown)
+    else if (type === 'crown') {
+      const propY = headTop.y - scale * 0.35;
+      this.ctx.translate(headTop.x, propY);
+      this.ctx.rotate(angle);
+
+      const propSize = scale * 1.05;
+
+      this.ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+      this.ctx.shadowBlur = 18;
+
+      this.ctx.font = `${Math.round(propSize)}px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji"`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('👑', 0, 0);
+
+      // 왕관 주변 번쩍이는 별빛
+      this.ctx.font = `${Math.round(propSize * 0.28)}px sans-serif`;
+      this.ctx.fillText('✨', -propSize * 0.55, -propSize * 0.2);
+      this.ctx.fillText('⭐', propSize * 0.55, -propSize * 0.25);
+    }
+
+    // 4. 🕶️ 힙합 픽셀 선글라스 (Thug Life Shades)
+    else if (type === 'sunglasses') {
+      const eyeMidX = (leftEye.x + rightEye.x) / 2;
+      const eyeMidY = (leftEye.y + rightEye.y) / 2;
+
+      this.ctx.translate(eyeMidX, eyeMidY);
+      this.ctx.rotate(angle);
+
+      const glassSize = scale * 1.15;
+
+      this.ctx.font = `${Math.round(glassSize)}px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji"`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowOffsetY = 4;
+
+      this.ctx.fillText('🕶️', 0, 0);
+    }
+
+    this.ctx.restore();
   }
 
   applyFaceOnlySmoothing(width, height, filterString, smoothing, coords) {
@@ -497,6 +565,7 @@ class BeautyFilterProcessor {
     this.maskCtx.closePath();
     this.maskCtx.fill();
 
+    // 눈과 입술 구멍 제외 (선명도 유지)
     this.maskCtx.filter = 'blur(6px)';
     this.maskCtx.globalCompositeOperation = 'destination-out';
 
@@ -527,56 +596,6 @@ class BeautyFilterProcessor {
     this.ctx.globalAlpha = (smoothing / 100) * 0.72;
     this.ctx.drawImage(this.blurCanvas, 0, 0);
     this.ctx.restore();
-  }
-
-  applyEyeliner(width, height, alpha, faceScale) {
-    const lm = this.landmarks;
-    if (!lm) return;
-
-    this.ctx.save();
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.strokeStyle = `rgba(28, 22, 25, ${alpha})`;
-    this.ctx.lineWidth = Math.max(1.8, faceScale * 0.038);
-
-    // 왼쪽 눈
-    this.ctx.beginPath();
-    for (let i = 0; i < this.leftEyeTopIndices.length; i++) {
-      const idx = this.leftEyeTopIndices[i];
-      const px = lm[idx].x * width;
-      const py = lm[idx].y * height;
-      if (i === 0) this.ctx.moveTo(px, py);
-      else this.ctx.lineTo(px, py);
-    }
-    const leftEnd = lm[133];
-    const leftPrev = lm[173];
-    const leftWingX = (leftEnd.x + (leftEnd.x - leftPrev.x) * 0.8) * width;
-    const leftWingY = (leftEnd.y - Math.abs(leftEnd.y - leftPrev.y) * 0.6) * height;
-    this.ctx.lineTo(leftWingX, leftWingY);
-    this.ctx.stroke();
-
-    // 오른쪽 눈
-    this.ctx.beginPath();
-    for (let i = 0; i < this.rightEyeTopIndices.length; i++) {
-      const idx = this.rightEyeTopIndices[i];
-      const px = lm[idx].x * width;
-      const py = lm[idx].y * height;
-      if (i === 0) this.ctx.moveTo(px, py);
-      else this.ctx.lineTo(px, py);
-    }
-    const rightEnd = lm[362];
-    const rightPrev = lm[398];
-    const rightWingX = (rightEnd.x + (rightEnd.x - rightPrev.x) * 0.8) * width;
-    const rightWingY = (rightEnd.y - Math.abs(rightEnd.y - rightPrev.y) * 0.6) * height;
-    this.ctx.lineTo(rightWingX, rightWingY);
-    this.ctx.stroke();
-
-    this.ctx.restore();
-  }
-
-  applyHighlighter(width, height, alpha, coords) {
-    // 코 부분에 세로 타원 흔적(안경 림과 유사한 경계선)을 유발하던 인위적인 콧대 타원 렌더링을 완전히 제거했습니다.
-    // 어떠한 세로선이나 경계 흔적도 남지 않습니다.
   }
 
   applyContouredLipTint(width, height, alpha) {
