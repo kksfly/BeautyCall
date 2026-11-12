@@ -517,25 +517,73 @@ class BeautyFilterProcessor {
       this.ctx.fillText('⭐', propSize * 0.55, -propSize * 0.25);
     }
 
-    // 4. 🕶️ 힙합 픽셀 선글라스 (Thug Life Shades)
+    // 4. 🕶️ 힙합 쿨 선글라스 (눈 위치와 너비에 100% 완벽 밀착되는 와이드 선글라스)
     else if (type === 'sunglasses') {
       const eyeMidX = (leftEye.x + rightEye.x) / 2;
       const eyeMidY = (leftEye.y + rightEye.y) / 2;
+      const eyeDist = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
 
       this.ctx.translate(eyeMidX, eyeMidY);
       this.ctx.rotate(angle);
 
-      const glassSize = scale * 1.15;
+      // 눈 사이 거리를 기준으로 정확한 렌즈 크기 계산
+      const lensW = eyeDist * 0.85;  // 렌즈 가로 폭
+      const lensH = eyeDist * 0.55;  // 렌즈 세로 높이
+      const halfDist = eyeDist * 0.5; // 두 눈 사이 중심 오프셋
 
-      this.ctx.font = `${Math.round(glassSize)}px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji"`;
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
+      // 안경 그림자
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      this.ctx.shadowBlur = 12;
+      this.ctx.shadowOffsetY = 6;
 
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-      this.ctx.shadowBlur = 8;
-      this.ctx.shadowOffsetY = 4;
+      // 1. 선글라스 프레임 (블랙 웨이페어러 / 픽셀 힙합 스타일)
+      this.ctx.fillStyle = '#0a0a0c';
+      this.ctx.strokeStyle = '#1a1a20';
+      this.ctx.lineWidth = Math.max(2, eyeDist * 0.05);
 
-      this.ctx.fillText('🕶️', 0, 0);
+      // 상단 탑 브로우 라인 (양쪽 관자놀이까지 시원하게 연결)
+      const topBarW = eyeDist * 2.3;
+      const topBarH = eyeDist * 0.16;
+      this.ctx.beginPath();
+      this.ctx.roundRect(-topBarW * 0.5, -lensH * 0.6, topBarW, topBarH, 4);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // 가운데 코 브릿지
+      this.ctx.fillRect(-eyeDist * 0.2, -lensH * 0.45, eyeDist * 0.4, eyeDist * 0.18);
+
+      // 2. 왼쪽 렌즈 (정확히 왼쪽 눈 위에 안착)
+      this.ctx.beginPath();
+      this.ctx.roundRect(-halfDist - lensW * 0.5, -lensH * 0.5, lensW, lensH, [2, 2, 8, 8]);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // 3. 오른쪽 렌즈 (정확히 오른쪽 눈 위에 안착)
+      this.ctx.beginPath();
+      this.ctx.roundRect(halfDist - lensW * 0.5, -lensH * 0.5, lensW, lensH, [2, 2, 8, 8]);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // 그림자 제거 후 렌즈 반사광 렌더링
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+
+      // 스타일리시한 대각선 화이트 반사광 (Glossy Glare)
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      this.ctx.lineWidth = Math.max(2, eyeDist * 0.04);
+      this.ctx.lineCap = 'round';
+
+      // 왼쪽 렌즈 반사광
+      this.ctx.beginPath();
+      this.ctx.moveTo(-halfDist - lensW * 0.28, -lensH * 0.35);
+      this.ctx.lineTo(-halfDist + lensW * 0.15, lensH * 0.3);
+      this.ctx.stroke();
+
+      // 오른쪽 렌즈 반사광
+      this.ctx.beginPath();
+      this.ctx.moveTo(halfDist - lensW * 0.28, -lensH * 0.35);
+      this.ctx.lineTo(halfDist + lensW * 0.15, lensH * 0.3);
+      this.ctx.stroke();
     }
 
     this.ctx.restore();
