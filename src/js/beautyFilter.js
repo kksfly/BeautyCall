@@ -201,6 +201,19 @@ class BeautyFilterProcessor {
     }
   }
 
+  hasPreset(presetName) {
+    return Boolean(
+      (this.specialPresets && this.specialPresets[presetName]) ||
+      (this.basicPresets && this.basicPresets[presetName])
+    );
+  }
+
+  getPresetCategory(presetName) {
+    if (this.specialPresets && this.specialPresets[presetName]) return 'special';
+    if (this.basicPresets && this.basicPresets[presetName]) return 'basic';
+    return null;
+  }
+
   loadRemotePresets(config) {
     if (!config) return;
 
@@ -218,7 +231,15 @@ class BeautyFilterProcessor {
       });
     }
 
-    this.setPreset(this.settings.preset);
+    // 🛡️ 현재 선택된 프리셋이 새로 업데이트된 서버 목록에 여전히 존재하는지 확인
+    const currentPreset = this.settings.preset;
+    if (!this.hasPreset(currentPreset)) {
+      console.warn(`🛡️ [Defense] 서버에서 "${currentPreset}" 필터가 삭제/변경되어 안전한 기본 필터로 전환합니다.`);
+      this.setPreset(this.settings.category === 'basic' ? 'none' : 'poop');
+    } else {
+      this.setPreset(currentPreset);
+    }
+
     console.log('✅ 서버로부터 최신 필터 프리셋 동기화 완료');
   }
 
@@ -280,14 +301,28 @@ class BeautyFilterProcessor {
   }
 
   setPreset(presetName) {
-    if (this.specialPresets[presetName]) {
+    if (this.specialPresets && this.specialPresets[presetName]) {
       this.settings.category = 'special';
       this.settings.preset = presetName;
       Object.assign(this.settings, this.specialPresets[presetName]);
-    } else if (this.basicPresets[presetName]) {
+      return presetName;
+    } else if (this.basicPresets && this.basicPresets[presetName]) {
       this.settings.category = 'basic';
       this.settings.preset = presetName;
       Object.assign(this.settings, this.basicPresets[presetName]);
+      return presetName;
+    } else {
+      // 🛡️ 서버나 로컬에 해당 필터가 존재하지 않는 경우의 방어 조치
+      console.warn(`🛡️ [Defense] 요청한 필터 "${presetName}"을 찾을 수 없어 안전한 기본 필터로 전환합니다.`);
+      const fallback = (this.specialPresets && this.specialPresets['poop']) ? 'poop'
+        : (this.specialPresets && Object.keys(this.specialPresets)[0])
+        || (this.basicPresets && this.basicPresets['none'] ? 'none' : Object.keys(this.basicPresets || {})[0])
+        || 'none';
+
+      if (fallback && fallback !== presetName && (this.specialPresets?.[fallback] || this.basicPresets?.[fallback])) {
+        return this.setPreset(fallback);
+      }
+      return null;
     }
   }
 

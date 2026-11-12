@@ -135,9 +135,117 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 시그널링 서버 주소
   const SIGNALING_URL = 'https://beautycall-server.onrender.com';
 
-  // 1. 뷰티 필터 엔진 인스턴스 (기본 프리셋: 💩 Poop on Head AR 마스크)
+  // 로컬 스토리지 키
+  const FILTER_STORAGE_KEY = 'beautycall_filter_settings';
+
+  // 1. 뷰티 필터 엔진 인스턴스 생성
   const filterProcessor = new BeautyFilterProcessor();
-  filterProcessor.setPreset('poop');
+
+  /**
+   * 카테고리 탭 UI 전환 함수 (대기실 & 통화 중 드로어 공통)
+   */
+  function applyCategoryTabUI(category) {
+    document.querySelectorAll('.category-tab-btn').forEach(t => {
+      t.classList.toggle('active', t.dataset.category === category);
+    });
+
+    const isBasic = category === 'basic';
+    if (basicPresetsList) basicPresetsList.classList.toggle('hidden', !isBasic);
+    if (specialPresetsSection) specialPresetsSection.classList.toggle('hidden', isBasic);
+    if (inCallBasicPresetsList) inCallBasicPresetsList.classList.toggle('hidden', !isBasic);
+    if (inCallSpecialPresetsSection) inCallSpecialPresetsSection.classList.toggle('hidden', isBasic);
+
+    // Special Filters 선택 시에는 하단 세부 조절(Tuning) 섹션을 숨김 (Basic Filters일 때만 표시)
+    if (tuningSlidersSection) tuningSlidersSection.classList.toggle('hidden', !isBasic);
+    if (inCallTuningSection) inCallTuningSection.classList.toggle('hidden', !isBasic);
+  }
+
+  /**
+   * 사용자의 현재 필터 및 뷰티 설정을 localStorage에 안전하게 저장
+   */
+  function saveFilterSettings() {
+    try {
+      const s = filterProcessor.settings;
+      const dataToSave = {
+        category: s.category || 'special',
+        preset: s.preset || 'poop',
+        beautyIntensity: (s.beautyIntensity !== undefined) ? s.beautyIntensity : 45,
+        customTuning: {
+          smoothing: s.smoothing,
+          brightness: s.brightness,
+          contrast: s.contrast,
+          saturation: s.saturation,
+          rosyTint: s.rosyTint,
+          eyeBrighten: s.eyeBrighten,
+          blush: s.blush,
+          lipTint: s.lipTint,
+          eyeliner: s.eyeliner,
+          highlighter: s.highlighter
+        }
+      };
+      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(dataToSave));
+    } catch (e) {
+      console.warn('필터 설정 로컬 저장 실패:', e);
+    }
+  }
+
+  /**
+   * localStorage로부터 이전 필터 설정을 안전하게 복원하고,
+   * 만약 서버/로컬에서 삭제되었거나 유효하지 않은 프리셋인 경우 방어 조치 수행
+   */
+  function restoreSavedFilterSettings() {
+    try {
+      const raw = localStorage.getItem(FILTER_STORAGE_KEY);
+      if (!raw) {
+        filterProcessor.setPreset('poop');
+        applyCategoryTabUI('special');
+        return null;
+      }
+
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object') {
+        filterProcessor.setPreset('poop');
+        applyCategoryTabUI('special');
+        return null;
+      }
+
+      // 1. 프리셋 적용 (방어 로직 내장 setPreset 호출)
+      const targetPreset = saved.preset || 'poop';
+      const appliedPreset = filterProcessor.setPreset(targetPreset);
+
+      // 2. 카테고리 복원
+      const category = saved.category || filterProcessor.getPresetCategory(appliedPreset) || 'special';
+      filterProcessor.settings.category = category;
+
+      // 3. 뷰티 강도 복원
+      if (typeof saved.beautyIntensity === 'number') {
+        filterProcessor.updateSetting('beautyIntensity', saved.beautyIntensity);
+      }
+
+      // 4. 세부 튜닝 설정 복원
+      if (saved.customTuning && typeof saved.customTuning === 'object') {
+        Object.entries(saved.customTuning).forEach(([k, v]) => {
+          if (typeof v === 'number') {
+            filterProcessor.updateSetting(k, v);
+          }
+        });
+      }
+
+      // 5. UI 카테고리 탭 동기화
+      applyCategoryTabUI(category);
+
+      console.log(`✨ 마지막 필터 설정 복원 완료 (카테고리: ${category}, 프리셋: ${appliedPreset})`);
+      return saved;
+    } catch (e) {
+      console.warn('저장된 필터 설정 복원 중 오류 (기본값 사용):', e);
+      filterProcessor.setPreset('poop');
+      applyCategoryTabUI('special');
+      return null;
+    }
+  }
+
+  // 앱 시작 시 저장된 필터 설정 복원 (없으면 기본 poop 적용)
+  restoreSavedFilterSettings();
 
   /**
    * 서버에서 동적으로 내려받은 필터 목록을 UI 버튼으로 렌더링
@@ -145,7 +253,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderFilterButtons(config) {
     if (!config) return;
 
+    // 서버 프리셋 로드 (현재 프리셋이 삭제되었으면 내부에서 fallback 방어 조치 동작)
     filterProcessor.loadRemotePresets(config);
+
+    const currentPreset = filterProcessor.settings.preset;
+    const currentCategory = filterProcessor.settings.category;
 
     function createButtons(listElement, items, isSmall = false) {
       if (!listElement) return;
@@ -169,6 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
 
           updateSliderDisplay();
+          saveFilterSettings();
         });
 
         listElement.appendChild(btn);
@@ -207,6 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
 
           updateSliderDisplay();
+          saveFilterSettings();
         });
 
         listElement.appendChild(card);
@@ -222,6 +336,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       createSpecialCards(specialPresetsList, config.special, false);
       createSpecialCards(inCallSpecialPresetsList, config.special, true);
     }
+
+    // 🛡️ 필터가 변경/삭제되었을 경우 UI 활성화 상태 및 저장 동기화
+    document.querySelectorAll(`[data-preset]`).forEach(b => {
+      b.classList.toggle('active', b.dataset.preset === currentPreset);
+    });
+    applyCategoryTabUI(currentCategory);
+    saveFilterSettings();
 
     console.log('✨ 서버 필터 목록 UI 렌더링 완료');
   }
@@ -367,26 +488,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   categoryTabBtns.forEach(tab => {
     tab.addEventListener('click', () => {
       const category = tab.dataset.category;
-
-      // 탭 버튼 스타일 동기화 (대기실 & 통화 중 드로어)
-      document.querySelectorAll(`.category-tab-btn`).forEach(t => {
-        t.classList.toggle('active', t.dataset.category === category);
-      });
-
-      // 목록 보이기/숨기기
-      const isBasic = category === 'basic';
-      if (basicPresetsList) basicPresetsList.classList.toggle('hidden', !isBasic);
-      if (specialPresetsSection) specialPresetsSection.classList.toggle('hidden', isBasic);
-      if (inCallBasicPresetsList) inCallBasicPresetsList.classList.toggle('hidden', !isBasic);
-      if (inCallSpecialPresetsSection) inCallSpecialPresetsSection.classList.toggle('hidden', isBasic);
-
-      // Special Filters 선택 시에는 하단 세부 조절(Tuning) 섹션을 숨김 (Basic Filters일 때만 표시)
-      if (tuningSlidersSection) tuningSlidersSection.classList.toggle('hidden', !isBasic);
-      if (inCallTuningSection) inCallTuningSection.classList.toggle('hidden', !isBasic);
+      filterProcessor.settings.category = category;
+      applyCategoryTabUI(category);
+      saveFilterSettings();
     });
   });
 
-  // 프리셋 버튼 클릭 이벤트
+  // 프리셋 버튼 클릭 이벤트 (HTML 기본 하드코딩 버튼용)
   presetBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const preset = btn.dataset.preset;
@@ -398,6 +506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       updateSliderDisplay();
+      saveFilterSettings();
     });
   });
 
@@ -410,6 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (inCallSlider) inCallSlider.value = val;
         if (inCallVal) inCallVal.textContent = `${val}%`;
         filterProcessor.updateSetting(settingKey, val);
+        saveFilterSettings();
       });
     }
     if (inCallSlider) {
@@ -419,6 +529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (mainSlider) mainSlider.value = val;
         if (mainVal) mainVal.textContent = `${val}%`;
         filterProcessor.updateSetting(settingKey, val);
+        saveFilterSettings();
       });
     }
   }
