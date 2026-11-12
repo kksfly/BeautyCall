@@ -32,7 +32,9 @@ class BeautyFilterProcessor {
       vignette: false,
       eyeBrighten: 40,
       blush: 55,
-      lipTint: 65
+      lipTint: 65,
+      eyeliner: 65,        // 0 ~ 100 (%) 또렷한 아이라인 & 속눈썹
+      highlighter: 55     // 0 ~ 100 (%) 콧대/광대 입체 윤광 하이라이터
     };
 
     // 1. Basic Filters
@@ -420,7 +422,7 @@ class BeautyFilterProcessor {
 
     const {
       smoothing, brightness, contrast, saturation, rosyTint,
-      vignette, eyeBrighten, blush, lipTint, specialType, beautyIntensity
+      vignette, eyeBrighten, blush, lipTint, eyeliner, highlighter, specialType, beautyIntensity
     } = this.settings;
 
     // Special Filters 탭일 때는 상단 단일 슬라이더(beautyIntensity)로 뷰티 전체 강도를 일괄 제어
@@ -432,6 +434,8 @@ class BeautyFilterProcessor {
     const effectiveBlush = blush * intensityRatio;
     const effectiveLip = lipTint * intensityRatio;
     const effectiveEyeBrighten = eyeBrighten * intensityRatio;
+    const effectiveEyeliner = (eyeliner ?? 65) * intensityRatio;
+    const effectiveHighlighter = (highlighter ?? 55) * intensityRatio;
     const effectiveRosy = rosyTint * intensityRatio;
     const effectiveBrightness = 100 + (brightness - 100) * intensityRatio;
 
@@ -449,18 +453,31 @@ class BeautyFilterProcessor {
       this.applyFaceOnlySmoothing(width, height, filterString, effectiveSmoothing, coords);
     }
 
-    // 3. 뷰티 메이크업 (치크 블러셔, 립 틴트, 눈가 브라이트닝)
+    // 3. 뷰티 메이크업 (하이라이터 & 윤광, 치크 블러셔, 아이라인 & 속눈썹, 립 틴트, 눈가 브라이트닝)
     if (coords && this.landmarks) {
+      // 콧대 & 광대 입체 윤광 하이라이터
+      if (effectiveHighlighter > 0) {
+        this.applyHighlighterAndGlow(width, height, (effectiveHighlighter / 100), coords);
+      }
+
+      // 치크 블러셔
       if (effectiveBlush > 0) {
         this.applyCheekBlush(coords.leftCheek, (effectiveBlush / 100) * 0.38);
         this.applyCheekBlush(coords.rightCheek, (effectiveBlush / 100) * 0.38);
       }
 
+      // 눈가 브라이트닝
       if (effectiveEyeBrighten > 0) {
         this.applyEyeBrightening(coords.leftEye, (effectiveEyeBrighten / 100) * 0.22);
         this.applyEyeBrightening(coords.rightEye, (effectiveEyeBrighten / 100) * 0.22);
       }
 
+      // 또렷한 아이라인 & 볼륨 속눈썹
+      if (effectiveEyeliner > 0) {
+        this.applyEyelinerAndLashes(width, height, (effectiveEyeliner / 100), coords);
+      }
+
+      // 립 틴트
       if (effectiveLip > 0) {
         this.applyContouredLipTint(width, height, (effectiveLip / 100) * 0.45);
       }
@@ -1042,6 +1059,221 @@ class BeautyFilterProcessor {
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
     this.ctx.fill();
+    this.ctx.restore();
+  }
+
+  /**
+   * 👁️ 또렷하고 매혹적인 윗눈꺼풀 아이라인 & 볼륨 속눈썹 렌더링
+   */
+  applyEyelinerAndLashes(width, height, intensity, coords) {
+    const lm = this.landmarks;
+    if (!lm) return;
+
+    this.ctx.save();
+
+    // 윗눈꺼풀 랜드마크 인덱스 (내안각 -> 외안각)
+    // 왼쪽 눈: 133(안쪽) -> 173 -> 157 -> 158 -> 159 -> 160 -> 161 -> 246 -> 33(바깥쪽 눈꼬리)
+    const leftUpperLid = [133, 173, 157, 158, 159, 160, 161, 246, 33];
+    // 오른쪽 눈: 362(안쪽) -> 398 -> 384 -> 385 -> 386 -> 387 -> 388 -> 466 -> 263(바깥쪽 눈꼬리)
+    const rightUpperLid = [362, 398, 384, 385, 386, 387, 388, 466, 263];
+
+    const eyeScale = coords.scale;
+    const baseLineWidth = Math.max(2.4, eyeScale * 0.052) * intensity;
+
+    const drawSingleEyeLine = (lidIndices, isLeft) => {
+      const pts = lidIndices.map(idx => ({
+        x: lm[idx].x * width,
+        y: lm[idx].y * height
+      }));
+
+      // 1. 부드러운 스모키 섀도우 베이스 (아이라인이 피부와 자연스럽게 어우러지도록 음영)
+      this.ctx.save();
+      this.ctx.strokeStyle = `rgba(40, 20, 30, ${intensity * 0.5})`;
+      this.ctx.lineWidth = baseLineWidth * 2.2;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.filter = 'blur(1.5px)';
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        this.ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      this.ctx.stroke();
+      this.ctx.restore();
+
+      // 2. 또렷한 딥 블랙/브라운 메인 아이라인 + 캣츠아이 윙(Wing)
+      this.ctx.save();
+      this.ctx.strokeStyle = `rgba(16, 10, 20, ${Math.min(1.0, intensity * 0.95)})`;
+      this.ctx.lineWidth = baseLineWidth;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        this.ctx.lineTo(pts[i].x, pts[i].y);
+      }
+
+      // 눈꼬리 캣츠아이 윙 라인 (자연스럽게 위로 뻗음)
+      const lastPt = pts[pts.length - 1];
+      const prevPt = pts[pts.length - 2];
+      const dx = lastPt.x - prevPt.x;
+      const dy = lastPt.y - prevPt.y;
+      const wingLen = eyeScale * 0.22 * intensity;
+      const wingX = lastPt.x + dx * 0.7 + (isLeft ? -wingLen * 0.7 : wingLen * 0.7);
+      const wingY = lastPt.y + dy * 0.2 - wingLen * 0.45;
+
+      this.ctx.quadraticCurveTo(lastPt.x, lastPt.y, wingX, wingY);
+      this.ctx.stroke();
+      this.ctx.restore();
+
+      // 3. 눈꼬리 쪽 섬세한 볼륨 속눈썹(Lashes)
+      this.ctx.save();
+      this.ctx.strokeStyle = `rgba(12, 8, 16, ${Math.min(1.0, intensity * 0.9)})`;
+      this.ctx.lineWidth = Math.max(1.2, baseLineWidth * 0.38);
+      this.ctx.lineCap = 'round';
+
+      for (let i = Math.floor(pts.length * 0.5); i < pts.length; i++) {
+        const pt = pts[i];
+        const lashLen = eyeScale * (0.13 + ((i - pts.length * 0.5) / (pts.length * 0.5)) * 0.14) * intensity;
+        const angleOffset = (isLeft ? -0.4 : 0.4) - 0.95;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(pt.x, pt.y);
+        this.ctx.lineTo(
+          pt.x + Math.cos(angleOffset) * lashLen * (isLeft ? -1 : 1),
+          pt.y - Math.sin(Math.abs(angleOffset)) * lashLen
+        );
+        this.ctx.stroke();
+      }
+      this.ctx.restore();
+    };
+
+    drawSingleEyeLine(leftUpperLid, true);
+    drawSingleEyeLine(rightUpperLid, false);
+
+    this.ctx.restore();
+  }
+
+  /**
+   * ✨ 오똑한 콧대, 코끝, 광대, 이마, 턱끝 입체 윤광 하이라이터 & 진주빛 글로우 렌더링
+   */
+  applyHighlighterAndGlow(width, height, intensity, coords) {
+    const lm = this.landmarks;
+    if (!lm) return;
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'screen'; // 화사하고 투명하게 빛나는 입체 하이라이터 블렌딩
+
+    const eyeScale = coords.scale;
+
+    // 1. 오똑한 콧대(Nose Bridge) 하이라이터 (미간 168에서 콧등 195까지)
+    const bridgeTop = { x: lm[168].x * width, y: lm[168].y * height };
+    const bridgeBottom = { x: lm[195].x * width, y: lm[195].y * height };
+    const bridgeWidth = Math.max(4.5, eyeScale * 0.13);
+
+    const noseGrad = this.ctx.createLinearGradient(
+      bridgeTop.x, bridgeTop.y,
+      bridgeBottom.x, bridgeBottom.y
+    );
+    noseGrad.addColorStop(0, `rgba(255, 245, 235, ${intensity * 0.65})`);
+    noseGrad.addColorStop(0.5, `rgba(255, 255, 252, ${intensity * 0.95})`);
+    noseGrad.addColorStop(1, `rgba(255, 242, 230, ${intensity * 0.55})`);
+
+    this.ctx.save();
+    this.ctx.filter = 'blur(3px)';
+    this.ctx.strokeStyle = noseGrad;
+    this.ctx.lineWidth = bridgeWidth;
+    this.ctx.lineCap = 'round';
+    this.ctx.beginPath();
+    this.ctx.moveTo(bridgeTop.x, bridgeTop.y);
+    this.ctx.lineTo(bridgeBottom.x, bridgeBottom.y);
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    // 2. 코끝(Nose Tip) 앙증맞은 버튼 하이라이트 (코끝 4번/1번)
+    const tip = { x: lm[4].x * width, y: lm[4].y * height };
+    const tipRadius = Math.max(3.5, eyeScale * 0.085);
+
+    const tipGrad = this.ctx.createRadialGradient(
+      tip.x, tip.y, 0,
+      tip.x, tip.y, tipRadius
+    );
+    tipGrad.addColorStop(0, `rgba(255, 255, 255, ${intensity * 1.0})`);
+    tipGrad.addColorStop(0.5, `rgba(255, 250, 242, ${intensity * 0.65})`);
+    tipGrad.addColorStop(1, 'rgba(255, 245, 235, 0)');
+
+    this.ctx.save();
+    this.ctx.filter = 'blur(2.2px)';
+    this.ctx.fillStyle = tipGrad;
+    this.ctx.beginPath();
+    this.ctx.arc(tip.x, tip.y, tipRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+
+    // 3. 양쪽 광대뼈(Cheekbone) 입체 펄 글로우
+    const drawCheekGlow = (landmarkIdx) => {
+      const cx = lm[landmarkIdx].x * width;
+      const cy = lm[landmarkIdx].y * height;
+      const r = eyeScale * 0.3;
+
+      const cheekGrad = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      cheekGrad.addColorStop(0, `rgba(255, 250, 242, ${intensity * 0.65})`);
+      cheekGrad.addColorStop(0.6, `rgba(255, 242, 232, ${intensity * 0.3})`);
+      cheekGrad.addColorStop(1, 'rgba(255, 242, 232, 0)');
+
+      this.ctx.save();
+      this.ctx.filter = 'blur(4.5px)';
+      this.ctx.fillStyle = cheekGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    };
+
+    // 왼쪽/오른쪽 광대뼈 윗부분 (116, 345)
+    if (lm[116]) drawCheekGlow(116);
+    if (lm[345]) drawCheekGlow(345);
+
+    // 4. 이마 중앙(Forehead) 은은한 볼륨 광채 (151번)
+    if (lm[151]) {
+      const fx = lm[151].x * width;
+      const fy = lm[151].y * height;
+      const fr = eyeScale * 0.36;
+
+      const fGrad = this.ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
+      fGrad.addColorStop(0, `rgba(255, 250, 240, ${intensity * 0.55})`);
+      fGrad.addColorStop(1, 'rgba(255, 250, 240, 0)');
+
+      this.ctx.save();
+      this.ctx.filter = 'blur(6px)';
+      this.ctx.fillStyle = fGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    }
+
+    // 5. 턱끝(Chin) V라인 하이라이트 (152번)
+    if (lm[152]) {
+      const chinX = lm[152].x * width;
+      const chinY = lm[152].y * height;
+      const cr = eyeScale * 0.19;
+
+      const cGrad = this.ctx.createRadialGradient(chinX, chinY, 0, chinX, chinY, cr);
+      cGrad.addColorStop(0, `rgba(255, 250, 245, ${intensity * 0.55})`);
+      cGrad.addColorStop(1, 'rgba(255, 250, 245, 0)');
+
+      this.ctx.save();
+      this.ctx.filter = 'blur(3px)';
+      this.ctx.fillStyle = cGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(chinX, chinY, cr, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    }
+
     this.ctx.restore();
   }
 
