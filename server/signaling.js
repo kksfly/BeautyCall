@@ -239,11 +239,11 @@ const FILTERS_CONFIG = {
     {
       id: 'dotMask',
       name: '⚪ Cyber Dot Mask',
-      desc: 'Hypnotic matrix dots covering your face with crystal clear eyes.',
+      desc: 'Hypnotic 3D matrix dots covering your face with crystal clear eyes.',
       specialType: 'dotMask',
       settings: {
-        smoothing: 80, brightness: 75, contrast: 135, saturation: 0,
-        rosyTint: 0, eyeBrighten: 65, blush: 0, lipTint: 0
+        smoothing: 80, brightness: 110, contrast: 104, saturation: 108,
+        rosyTint: 15, eyeBrighten: 45, blush: 25, lipTint: 30
       }
     }
   ]

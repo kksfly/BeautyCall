@@ -131,15 +131,15 @@ class BeautyFilterProcessor {
       },
       dotMask: {
         specialType: 'dotMask',
-        smoothing: 80,      // 하얀 도트 매트릭스 마스크
-        brightness: 75,     // 흑백 사이버 분위기
-        contrast: 135,
-        saturation: 0,
-        rosyTint: 0,
-        vignette: true,
-        eyeBrighten: 65,
-        blush: 0,
-        lipTint: 0
+        smoothing: 80,      // 하얀 3D 도트 매트릭스 마스크
+        brightness: 110,    // 화사한 컬러 뷰티
+        contrast: 104,
+        saturation: 108,    // 🎨 생생한 자연스러운 컬러 유지
+        rosyTint: 15,
+        vignette: false,    // 어두운 비네팅 해제
+        eyeBrighten: 45,
+        blush: 25,
+        lipTint: 30
       }
     };
 
@@ -654,97 +654,100 @@ class BeautyFilterProcessor {
         return;
       }
 
-      // 얼굴 윤곽선 Path2D 생성
-      const facePath = new Path2D();
-      let minX = width, maxX = 0, minY = height, maxY = 0;
-
-      for (let i = 0; i < this.faceOvalIndices.length; i++) {
-        const idx = this.faceOvalIndices[i];
-        const px = lm[idx].x * width;
-        const py = lm[idx].y * height;
-        if (i === 0) facePath.moveTo(px, py);
-        else facePath.lineTo(px, py);
-
-        if (px < minX) minX = px;
-        if (px > maxX) maxX = px;
-        if (py < minY) minY = py;
-        if (py > maxY) maxY = py;
-      }
-      facePath.closePath();
-
-      // 턱 아래 목 부분 점 영역 (이미지와 동일하게 턱 밑에도 도트 배치)
-      const chinBottom = lm[152];
-      const neckPath = new Path2D();
-      const faceWidth = maxX - minX;
-      const neckRadiusX = faceWidth * 0.26;
-      const neckRadiusY = (maxY - minY) * 0.16;
-      const neckCenterX = chinBottom.x * width;
-      const neckCenterY = chinBottom.y * height + neckRadiusY * 0.95;
-      neckPath.ellipse(neckCenterX, neckCenterY, neckRadiusX, neckRadiusY, 0, 0, Math.PI * 2);
-
+      const leftEye = coords.leftEye;
+      const rightEye = coords.rightEye;
       const eyeDist = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
 
-      // 도트 격자 크기 및 간격 (얼굴 크기에 비례하는 최적 밀도)
-      const spacing = Math.max(7, Math.round(faceWidth * 0.038)); // 점 간격
-      const dotRadius = Math.max(1.6, faceWidth * 0.0078);        // 점 반지름
+      // 눈 제외 타원 반경 (눈동자와 눈꺼풀 안쪽 도트 배제)
+      const eyeExclusionRadiusX = eyeDist * 0.36;
+      const eyeExclusionRadiusY = eyeDist * 0.24;
 
-      // 눈 제외 타원 크기 (양쪽 눈동자와 눈꺼풀 주변을 깔끔하게 비움)
-      const eyeExclusionW = eyeDist * 0.42;
-      const eyeExclusionH = eyeDist * 0.28;
-
-      // 얼굴 회전 각도(angle)에 맞춘 엇갈린 육각 격자(Hexagonal Matrix) 생성
-      const faceCenterX = (leftEye.x + rightEye.x) / 2;
-      const faceCenterY = ((leftEye.y + rightEye.y) / 2 + chinBottom.y * height) / 2;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-
-      const faceRadius = scale * 0.95;
-      const rowStep = spacing * 0.866; // 정육각 격자 높이 비율
+      // 점 기본 반지름
+      const baseDotRadius = Math.max(1.8, scale * 0.016);
 
       this.ctx.save();
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.75)';
-      this.ctx.shadowBlur = Math.max(2, dotRadius * 0.8);
+      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.85)';
+      this.ctx.shadowBlur = Math.max(2, baseDotRadius * 0.8);
 
       this.ctx.beginPath();
 
-      const yStart = -faceRadius * 1.35;
-      const yEnd = faceRadius * 1.45;
-      const xStart = -faceRadius * 1.25;
-      const xEnd = faceRadius * 1.25;
+      // 얼굴의 3D 곡면을 완벽히 감싸기 위한 3D 포인트 목록 수집: { x, y, z }
+      const points = [];
 
-      for (let localY = yStart; localY <= yEnd; localY += rowStep) {
-        const row = Math.round(localY / rowStep);
-        const xOffset = (Math.abs(row) % 2 === 1) ? spacing * 0.5 : 0;
+      // 1. MediaPipe 468개 랜드마크 정점 전체 (실제 얼굴 3D 토폴로지에 1:1 고정)
+      for (let i = 0; i < 468; i++) {
+        if (!lm[i]) continue;
+        points.push({
+          x: lm[i].x * width,
+          y: lm[i].y * height,
+          z: lm[i].z || 0
+        });
+      }
 
-        for (let localX = xStart; localX <= xEnd; localX += spacing) {
-          const rx = localX + xOffset;
-          const ry = localY;
+      // 2. 이마 상단 곡면 보간 (헤어라인 위쪽으로 둥글게 이마를 감싸도록 자연스럽게 확장)
+      const foreheadIndices = [109, 67, 103, 54, 21, 10, 338, 297, 332, 284, 251];
+      const noseTip = lm[1] || lm[4];
+      const foreheadCenter = lm[10];
+      const faceUpX = (foreheadCenter.x - noseTip.x) * width;
+      const faceUpY = (foreheadCenter.y - noseTip.y) * height;
+      const upLen = Math.hypot(faceUpX, faceUpY) || 1;
+      const normUpX = faceUpX / upLen;
+      const normUpY = faceUpY / upLen;
 
-          // 얼굴 회전 각도 적용 절대 좌표 변환
-          const px = faceCenterX + rx * cos - ry * sin;
-          const py = faceCenterY + rx * sin + ry * cos;
-
-          // 1. 얼굴 영역 또는 목 영역 내부인지 확인
-          const isInsideFace = this.ctx.isPointInPath(facePath, px, py);
-          const isInsideNeck = this.ctx.isPointInPath(neckPath, px, py);
-
-          if (isInsideFace || isInsideNeck) {
-            // 2. 왼쪽 눈 내부인지 확인 (제외)
-            const dxL = (px - leftEye.x) / eyeExclusionW;
-            const dyL = (py - leftEye.y) / eyeExclusionH;
-            if (dxL * dxL + dyL * dyL < 1.0) continue;
-
-            // 3. 오른쪽 눈 내부인지 확인 (제외)
-            const dxR = (px - rightEye.x) / eyeExclusionW;
-            const dyR = (py - rightEye.y) / eyeExclusionH;
-            if (dxR * dxR + dyR * dyR < 1.0) continue;
-
-            // 4. 유효한 도트 그리기 (단일 Path로 초고속 렌더링)
-            this.ctx.moveTo(px + dotRadius, py);
-            this.ctx.arc(px, py, dotRadius, 0, Math.PI * 2);
-          }
+      // 이마 위쪽 2개 레이어 곡면 도트 추가
+      for (let layer = 1; layer <= 2; layer++) {
+        const liftDist = scale * 0.11 * layer;
+        for (let i = 0; i < foreheadIndices.length; i++) {
+          const pt = lm[foreheadIndices[i]];
+          if (!pt) continue;
+          points.push({
+            x: pt.x * width + normUpX * liftDist,
+            y: pt.y * height + normUpY * liftDist,
+            z: (pt.z || 0) + layer * 0.03
+          });
         }
+      }
+
+      // 3. 턱 아래 목 곡면 보간 (턱선을 따라 자연스럽게 아래로 전개)
+      const chinIndices = [58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288];
+      const faceDownX = -normUpX;
+      const faceDownY = -normUpY;
+
+      for (let layer = 1; layer <= 2; layer++) {
+        const dropDist = scale * 0.1 * layer;
+        for (let i = 0; i < chinIndices.length; i++) {
+          const pt = lm[chinIndices[i]];
+          if (!pt) continue;
+          points.push({
+            x: pt.x * width + faceDownX * dropDist,
+            y: pt.y * height + faceDownY * dropDist,
+            z: (pt.z || 0) + layer * 0.04
+          });
+        }
+      }
+
+      // 4. 각 3D 정점을 순회하며 눈 영역 제외 및 원근감(Depth) 도트 렌더링
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+
+        // 왼쪽 눈 내부인지 검사 (제외)
+        const dxL = (p.x - leftEye.x) / eyeExclusionRadiusX;
+        const dyL = (p.y - leftEye.y) / eyeExclusionRadiusY;
+        if (dxL * dxL + dyL * dyL < 1.0) continue;
+
+        // 오른쪽 눈 내부인지 검사 (제외)
+        const dxR = (p.x - rightEye.x) / eyeExclusionRadiusX;
+        const dyR = (p.y - rightEye.y) / eyeExclusionRadiusY;
+        if (dxR * dxR + dyR * dyR < 1.0) continue;
+
+        // 3D 깊이(z)에 따른 원근감 스케일링 (카메라와 가까운 코/앞볼은 크고, 뒤로 감긴 옆볼/외곽은 작아짐)
+        const zDepth = p.z;
+        const zFactor = Math.max(0.65, Math.min(1.35, 1.0 - zDepth * 2.8));
+        const r = baseDotRadius * zFactor;
+
+        this.ctx.moveTo(p.x + r, p.y);
+        this.ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
       }
 
       this.ctx.fill();
