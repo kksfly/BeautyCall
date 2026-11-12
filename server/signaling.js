@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3500;
 const MAX_USERS_PER_ROOM = 4;
 
 // 🔒 보안 설정 (지인 4인 전용 비공개 액세스 키 및 무차별 대입 방어)
-const ACCESS_KEY = process.env.APP_ACCESS_KEY || 'beauty2026';
+const ACCESS_KEY = process.env.APP_ACCESS_KEY || 'danicajoy';
 const MAX_ATTEMPTS = 5;
 const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24시간 (하루 동안 차단)
 

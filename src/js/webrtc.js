@@ -5,7 +5,7 @@ class WebRTCManager {
   constructor({ socketUrl, authKey, onRemoteStream, onUserLeft, onError }) {
     this.socketUrl = socketUrl || (typeof window !== 'undefined' && window.location.protocol.startsWith('http')
       ? window.location.origin
-      : 'https://video-call-app-q6e2.onrender.com');
+      : 'https://beautycall-server.onrender.com');
     this.authKey = authKey || '';
     this.socket = null;
     this.localStream = null;

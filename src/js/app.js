@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 시그널링 서버 주소 (웹 브라우저 접속 시 자기 자신 origin, Electron 접속 시 Render 클라우드)
   const SIGNALING_URL = (typeof window !== 'undefined' && window.location.protocol.startsWith('http'))
     ? window.location.origin
-    : 'https://video-call-app-q6e2.onrender.com';
+    : 'https://beautycall-server.onrender.com';
 
   // 로컬 스토리지 키
   const FILTER_STORAGE_KEY = 'beautycall_filter_settings';
@@ -561,9 +561,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     copyInviteLinkBtn.addEventListener('click', () => {
       const baseOrigin = (typeof window !== 'undefined' && window.location.protocol.startsWith('http'))
         ? window.location.origin
-        : 'https://video-call-app-q6e2.onrender.com';
+        : 'https://beautycall-server.onrender.com';
       const targetRoom = roomIdInput ? roomIdInput.value.trim() || 'room-101' : 'room-101';
-      const inviteUrl = `${baseOrigin}/?key=${encodeURIComponent(currentAccessKey || 'beauty2026')}&room=${encodeURIComponent(targetRoom)}`;
+      const inviteUrl = `${baseOrigin}/?key=${encodeURIComponent(currentAccessKey || 'danicajoy')}&room=${encodeURIComponent(targetRoom)}`;
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(inviteUrl).then(() => {
