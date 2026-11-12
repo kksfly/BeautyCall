@@ -602,16 +602,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(inviteUrl).then(() => {
           copyInviteLinkBtn.classList.add('copied');
-          copyInviteLinkBtn.textContent = '✓ 초대 링크 복사 완료!';
+          copyInviteLinkBtn.textContent = '✓ Link Copied!';
           setTimeout(() => {
             copyInviteLinkBtn.classList.remove('copied');
-            copyInviteLinkBtn.textContent = '🔗 지인 초대 링크 복사';
+            copyInviteLinkBtn.textContent = '🔗 Copy Invite Link';
           }, 2500);
         }).catch(() => {
-          prompt('아래 링크를 복사하여 지인 4명에게 보내주세요:', inviteUrl);
+          prompt('Copy this invite link to share:', inviteUrl);
         });
       } else {
-        prompt('아래 링크를 복사하여 지인 4명에게 보내주세요:', inviteUrl);
+        prompt('Copy this invite link to share:', inviteUrl);
       }
     });
   }
