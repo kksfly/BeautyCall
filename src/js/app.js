@@ -67,12 +67,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 필터 프리셋 및 카테고리
   const categoryTabBtns = document.querySelectorAll('.category-tab-btn');
   const basicPresetsList = document.getElementById('basicPresetsList');
+  const specialPresetsSection = document.getElementById('specialPresetsSection');
   const specialPresetsList = document.getElementById('specialPresetsList');
   const inCallBasicPresetsList = document.getElementById('inCallBasicPresetsList');
+  const inCallSpecialPresetsSection = document.getElementById('inCallSpecialPresetsSection');
   const inCallSpecialPresetsList = document.getElementById('inCallSpecialPresetsList');
   const tuningSlidersSection = document.getElementById('tuningSlidersSection');
   const inCallTuningSection = document.getElementById('inCallTuningSection');
   const presetBtns = document.querySelectorAll('.preset-btn');
+
+  // Special Filters 상단 단일 뷰티 강도 슬라이더
+  const specialIntensitySlider = document.getElementById('specialIntensitySlider');
+  const specialIntensityVal = document.getElementById('specialIntensityVal');
+  const inCallSpecialIntensitySlider = document.getElementById('inCallSpecialIntensitySlider');
+  const inCallSpecialIntensityVal = document.getElementById('inCallSpecialIntensityVal');
 
   // 메이크업 & 뷰티 슬라이더 (대기실)
   const eyelinerSlider = document.getElementById('eyelinerSlider');
@@ -318,6 +326,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       brightnessVal.textContent = `${s.brightness}%`;
     }
 
+    // Special Filters 단일 뷰티 강도 슬라이더 동기화
+    const intensity = (s.beautyIntensity !== undefined) ? s.beautyIntensity : 45;
+    if (specialIntensitySlider) {
+      specialIntensitySlider.value = intensity;
+      specialIntensityVal.textContent = `${intensity}%`;
+    }
+    if (inCallSpecialIntensitySlider) {
+      inCallSpecialIntensitySlider.value = intensity;
+      inCallSpecialIntensityVal.textContent = `${intensity}%`;
+    }
+
     // 통화 중 드로어 슬라이더 동기화
     if (inCallEyelinerSlider) {
       inCallEyelinerSlider.value = s.eyeliner;
@@ -357,9 +376,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 목록 보이기/숨기기
       const isBasic = category === 'basic';
       if (basicPresetsList) basicPresetsList.classList.toggle('hidden', !isBasic);
-      if (specialPresetsList) specialPresetsList.classList.toggle('hidden', isBasic);
+      if (specialPresetsSection) specialPresetsSection.classList.toggle('hidden', isBasic);
       if (inCallBasicPresetsList) inCallBasicPresetsList.classList.toggle('hidden', !isBasic);
-      if (inCallSpecialPresetsList) inCallSpecialPresetsList.classList.toggle('hidden', isBasic);
+      if (inCallSpecialPresetsSection) inCallSpecialPresetsSection.classList.toggle('hidden', isBasic);
 
       // Special Filters 선택 시에는 하단 세부 조절(Tuning) 섹션을 숨김 (Basic Filters일 때만 표시)
       if (tuningSlidersSection) tuningSlidersSection.classList.toggle('hidden', !isBasic);
@@ -411,6 +430,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindSlider(lipTintSlider, lipTintVal, inCallLipSlider, inCallLipVal, 'lipTint');
   bindSlider(smoothingSlider, smoothingVal, inCallSmoothingSlider, inCallSmoothingVal, 'smoothing');
   bindSlider(brightnessSlider, brightnessVal, null, null, 'brightness');
+
+  // Special Filters 상단 단일 뷰티 강도 슬라이더 연결
+  bindSlider(specialIntensitySlider, specialIntensityVal, inCallSpecialIntensitySlider, inCallSpecialIntensityVal, 'beautyIntensity');
 
   // 4. 마이크/카메라 토글
   function updateMediaTogglesUI() {

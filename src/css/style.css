@@ -308,6 +308,34 @@ body {
   font-size: 11px;
 }
 
+/* Special Filters 상단 단일 뷰티 강도 슬라이더 박스 */
+.special-intensity-box {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.special-intensity-box .slider-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff8ea3;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.special-intensity-box.small {
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.special-intensity-box.small .slider-header {
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
 /* Special Filters 카드 리스트 스타일 */
 .special-filter-list {
   display: flex;

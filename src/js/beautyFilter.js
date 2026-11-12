@@ -23,15 +23,16 @@ class BeautyFilterProcessor {
       category: 'special',
       preset: 'poop',
       specialType: 'poop', // 'poop' | 'catEars' | 'crown' | 'sunglasses' | null
-      smoothing: 80,       // 스페셜 필터는 기본적으로 극강 뽀샤시 탑재
-      brightness: 114,
+      beautyIntensity: 45, // 0 ~ 100 (%) Special Filters 상단 단일 뷰티 강도 (기본값: 자연스러운 45%)
+      smoothing: 75,
+      brightness: 110,
       contrast: 102,
-      saturation: 110,
+      saturation: 108,
       rosyTint: 20,
       vignette: false,
       eyeBrighten: 40,
-      blush: 60,           // 사랑스러운 볼터치
-      lipTint: 70          // 생기 립 틴트
+      blush: 55,
+      lipTint: 65
     };
 
     // 1. Basic Filters
@@ -348,10 +349,22 @@ class BeautyFilterProcessor {
 
     const {
       smoothing, brightness, contrast, saturation, rosyTint,
-      vignette, eyeBrighten, blush, lipTint, specialType
+      vignette, eyeBrighten, blush, lipTint, specialType, beautyIntensity
     } = this.settings;
 
-    const filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
+    // Special Filters 탭일 때는 상단 단일 슬라이더(beautyIntensity)로 뷰티 전체 강도를 일괄 제어
+    const intensityRatio = (this.settings.category === 'special')
+      ? ((beautyIntensity ?? 45) / 100)
+      : 1.0;
+
+    const effectiveSmoothing = smoothing * intensityRatio;
+    const effectiveBlush = blush * intensityRatio;
+    const effectiveLip = lipTint * intensityRatio;
+    const effectiveEyeBrighten = eyeBrighten * intensityRatio;
+    const effectiveRosy = rosyTint * intensityRatio;
+    const effectiveBrightness = 100 + (brightness - 100) * intensityRatio;
+
+    const filterString = `brightness(${effectiveBrightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
 
     // 1. 메인 선명한 원본 영상 렌더링
     this.ctx.filter = filterString;
@@ -361,24 +374,24 @@ class BeautyFilterProcessor {
     const coords = this.getFaceCoordinates(width, height);
 
     // 2. 얼굴 전용 스킨 스무딩 (도자기 피부)
-    if (smoothing > 0 && coords && this.landmarks) {
-      this.applyFaceOnlySmoothing(width, height, filterString, smoothing, coords);
+    if (effectiveSmoothing > 0 && coords && this.landmarks) {
+      this.applyFaceOnlySmoothing(width, height, filterString, effectiveSmoothing, coords);
     }
 
     // 3. 뷰티 메이크업 (치크 블러셔, 립 틴트, 눈가 브라이트닝)
     if (coords && this.landmarks) {
-      if (blush > 0) {
-        this.applyCheekBlush(coords.leftCheek, (blush / 100) * 0.38);
-        this.applyCheekBlush(coords.rightCheek, (blush / 100) * 0.38);
+      if (effectiveBlush > 0) {
+        this.applyCheekBlush(coords.leftCheek, (effectiveBlush / 100) * 0.38);
+        this.applyCheekBlush(coords.rightCheek, (effectiveBlush / 100) * 0.38);
       }
 
-      if (eyeBrighten > 0) {
-        this.applyEyeBrightening(coords.leftEye, (eyeBrighten / 100) * 0.22);
-        this.applyEyeBrightening(coords.rightEye, (eyeBrighten / 100) * 0.22);
+      if (effectiveEyeBrighten > 0) {
+        this.applyEyeBrightening(coords.leftEye, (effectiveEyeBrighten / 100) * 0.22);
+        this.applyEyeBrightening(coords.rightEye, (effectiveEyeBrighten / 100) * 0.22);
       }
 
-      if (lipTint > 0) {
-        this.applyContouredLipTint(width, height, (lipTint / 100) * 0.45);
+      if (effectiveLip > 0) {
+        this.applyContouredLipTint(width, height, (effectiveLip / 100) * 0.45);
       }
 
       // 4. 🎭 Special Filters: 머리/얼굴 움직임을 따라다니는 재미있는 3D AR 스티커 렌더링
@@ -388,10 +401,10 @@ class BeautyFilterProcessor {
     }
 
     // 5. 전체 핑크 생기 틴트
-    if (rosyTint > 0) {
+    if (effectiveRosy > 0) {
       this.ctx.save();
       this.ctx.globalCompositeOperation = 'soft-light';
-      this.ctx.fillStyle = `rgba(255, 175, 190, ${(rosyTint / 100) * 0.3})`;
+      this.ctx.fillStyle = `rgba(255, 175, 190, ${(effectiveRosy / 100) * 0.3})`;
       this.ctx.fillRect(0, 0, width, height);
       this.ctx.restore();
     }

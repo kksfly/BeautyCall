@@ -109,9 +109,21 @@
               <button class="preset-btn" data-preset="monochrome">🖤 Mono</button>
             </div>
 
-            <!-- 2. Special Filters 목록 (설명과 함께 카드 리스트로 표시) -->
-            <div id="specialPresetsList" class="special-filter-list">
-              <!-- 동적으로 카드 렌더링 -->
+            <!-- 2. Special Filters 섹션 (상단 뷰티 강도 슬라이더 + 필터 카드 목록) -->
+            <div id="specialPresetsSection">
+              <!-- 단일 뷰티 필터 강도 조절 슬라이더 -->
+              <div id="specialIntensityControl" class="special-intensity-box">
+                <div class="slider-header">
+                  <span>✨ Beauty Intensity</span>
+                  <span id="specialIntensityVal">45%</span>
+                </div>
+                <input type="range" id="specialIntensitySlider" min="0" max="100" value="45">
+              </div>
+
+              <!-- Special Filters 카드 목록 -->
+              <div id="specialPresetsList" class="special-filter-list">
+                <!-- 동적으로 카드 렌더링 -->
+              </div>
             </div>
           </div>
 
@@ -264,9 +276,18 @@
           <button class="preset-btn in-call-preset" data-preset="cool">Cool</button>
         </div>
 
-        <!-- Special Filters 목록 (드로어용) -->
-        <div id="inCallSpecialPresetsList" class="special-filter-list small">
-          <!-- 동적 카드 렌더링 -->
+        <!-- Special Filters 섹션 (드로어용) -->
+        <div id="inCallSpecialPresetsSection">
+          <div class="special-intensity-box small">
+            <div class="slider-header">
+              <span>✨ Beauty Intensity</span>
+              <span id="inCallSpecialIntensityVal">45%</span>
+            </div>
+            <input type="range" id="inCallSpecialIntensitySlider" min="0" max="100" value="45">
+          </div>
+          <div id="inCallSpecialPresetsList" class="special-filter-list small">
+            <!-- 동적 카드 렌더링 -->
+          </div>
         </div>
 
         <!-- 세부 튜닝 슬라이더 (Basic Filters 선택 시에만 표시) -->
