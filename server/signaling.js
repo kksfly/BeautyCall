@@ -53,11 +53,11 @@ function checkIpBlocked(ip) {
  */
 function renderBlockedHtml(remainingHours) {
   return `<!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>접속 차단됨 - BeautyCall</title>
+  <title>Access Blocked - BeautyCall</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -103,9 +103,9 @@ function renderBlockedHtml(remainingHours) {
 <body>
   <div class="card">
     <div class="icon">⛔</div>
-    <h1>접속이 차단되었습니다</h1>
-    <p>비밀번호를 <strong>5회 이상</strong> 잘못 입력하여 보안 정책에 따라 <strong>24시간 동안</strong> 이 기기의 모든 접속이 차단되었습니다.</p>
-    <div class="badge">차단 해제까지 남은 시간: 약 ${remainingHours}시간</div>
+    <h1>Access Blocked</h1>
+    <p>You entered an incorrect password <strong>5 times</strong>. All access from this device has been blocked for <strong>24 hours</strong> in accordance with security policy.</p>
+    <div class="badge">Unblocks in: Approx. ${remainingHours} hours</div>
     <div class="footer-note">BeautyCall Private Security Shield</div>
   </div>
 </body>
@@ -296,7 +296,7 @@ const server = http.createServer((req, res) => {
         success: false,
         blocked: true,
         remainingHours: ipStatus.remainingHours,
-        message: '비밀번호를 5회 이상 잘못 입력하여 24시간 동안 접속이 완전히 차단되었습니다.'
+        message: 'Too many incorrect attempts. Access is blocked for 24 hours.'
       }));
       return;
     }
@@ -332,7 +332,7 @@ const server = http.createServer((req, res) => {
         ipTracker.delete(clientIp);
         console.log(`[Auth Success] IP: ${clientIp}`);
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ success: true, message: '인증에 성공했습니다.' }));
+        res.end(JSON.stringify({ success: true, message: 'Authentication successful.' }));
       } else {
         // 불일치: 실패 횟수 증가
         const currentAttempts = (ipStatus.attempts || 0) + 1;
@@ -350,7 +350,7 @@ const server = http.createServer((req, res) => {
             success: false,
             blocked: true,
             remainingHours: 24,
-            message: '비밀번호를 5회 이상 잘못 입력하여 24시간 동안 접속이 완전히 차단되었습니다.'
+            message: 'Too many incorrect attempts. Access is blocked for 24 hours.'
           }));
         } else {
           ipTracker.set(clientIp, {
@@ -358,12 +358,13 @@ const server = http.createServer((req, res) => {
             blockedUntil: null
           });
           res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+          const left = MAX_ATTEMPTS - currentAttempts;
           res.end(JSON.stringify({
             success: false,
             blocked: false,
             attempts: currentAttempts,
-            remainingAttempts: MAX_ATTEMPTS - currentAttempts,
-            message: `비밀번호가 올바르지 않습니다. (남은 기회: ${MAX_ATTEMPTS - currentAttempts}회)`
+            remainingAttempts: left,
+            message: `Incorrect password. (${left} attempt${left > 1 ? 's' : ''} left)`
           }));
         }
       }

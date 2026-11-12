@@ -28,10 +28,10 @@
   <div id="blockedOverlay" class="security-overlay hidden">
     <div class="security-card blocked">
       <div class="security-icon">⛔</div>
-      <h2>접속이 차단되었습니다</h2>
-      <p>비밀번호를 <strong>5회 이상</strong> 잘못 입력하여<br>보안 정책에 따라 <strong>24시간 동안</strong> 접속이 완전히 차단되었습니다.</p>
-      <div id="blockedTimeBadge" class="security-badge">차단 해제까지: 약 24시간</div>
-      <div class="security-subnote">브라우저나 PC를 재시작해도 24시간 동안 해제되지 않습니다.</div>
+      <h2>Access Blocked</h2>
+      <p>You entered an incorrect password <strong>5 times</strong>.<br>In accordance with security policy, access is blocked for <strong>24 hours</strong>.</p>
+      <div id="blockedTimeBadge" class="security-badge">Unblocks in: Approx. 24 hours</div>
+      <div class="security-subnote">Restarting your browser or device will not bypass the 24-hour block.</div>
     </div>
   </div>
 
@@ -40,16 +40,16 @@
     <div class="security-card">
       <div class="security-icon">🔒</div>
       <h2>Private Access Only</h2>
-      <p>지인 4인 전용 비공개 화상 통화 서비스입니다.<br>공유받으신 <strong>비밀 액세스 코드</strong>를 입력해 주세요.</p>
+      <p>This is a private video call service for invited friends only.<br>Please enter your shared <strong>secret access code</strong>.</p>
       
       <div class="auth-input-box">
-        <input type="password" id="accessKeyInput" placeholder="비밀번호 입력" autofocus autocomplete="off" />
-        <button id="verifyKeyBtn" class="btn btn-primary">입장하기</button>
+        <input type="password" id="accessKeyInput" placeholder="Enter password" autofocus autocomplete="off" />
+        <button id="verifyKeyBtn" class="btn btn-primary">Enter</button>
       </div>
 
       <div class="auth-warning">
-        ⚠️ <strong>주의:</strong> 5회 연속 잘못 입력 시 <strong>24시간 동안 접속이 자동 차단</strong>됩니다.
-        <div id="remainingAttemptsText" class="remaining-text">남은 기회: 5회</div>
+        ⚠️ <strong>Warning:</strong> 5 consecutive incorrect attempts will <strong>block access for 24 hours</strong>.
+        <div id="remainingAttemptsText" class="remaining-text">Attempts left: 5</div>
       </div>
       <div id="authErrorMsg" class="auth-error-msg hidden"></div>
     </div>

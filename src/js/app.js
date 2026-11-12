@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (blockedOverlay) {
       blockedOverlay.classList.remove('hidden');
       if (blockedTimeBadge) {
-        blockedTimeBadge.textContent = `차단 해제까지: 약 ${remainingHours}시간`;
+        blockedTimeBadge.textContent = `Unblocks in: Approx. ${remainingHours} hours`;
       }
     }
   }
@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (blockedOverlay) blockedOverlay.classList.add('hidden');
     if (authModal) {
       authModal.classList.remove('hidden');
-      if (remainingAttemptsText) remainingAttemptsText.textContent = `남은 기회: ${remainingAttempts}회`;
+      if (remainingAttemptsText) remainingAttemptsText.textContent = `Attempts left: ${remainingAttempts}`;
       if (errorMsg && authErrorMsg) {
         authErrorMsg.textContent = errorMsg;
         authErrorMsg.classList.remove('hidden');
@@ -611,7 +611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 🔒 액세스 키 검증 함수 (서버 API 호출)
   async function verifyAccessCode(codeToTest, isAuto = false) {
     if (!codeToTest && !isAuto) {
-      showAuthModal(5, '비밀번호를 입력해 주세요.');
+      showAuthModal(5, 'Please enter the password.');
       return false;
     }
 
