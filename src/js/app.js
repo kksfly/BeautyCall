@@ -60,10 +60,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nicknameInput = document.getElementById('nicknameInput');
   const roomIdInput = document.getElementById('roomIdInput');
   const joinCallBtn = document.getElementById('joinCallBtn');
+  const joinBtnSpinner = document.getElementById('joinBtnSpinner');
+  const joinBtnText = document.getElementById('joinBtnText');
+  const joinBtnArrow = document.getElementById('joinBtnArrow');
   const copyInviteLinkBtn = document.getElementById('copyInviteLinkBtn');
   const toggleMicBtn = document.getElementById('toggleMicBtn');
   const toggleCamBtn = document.getElementById('toggleCamBtn');
   const toggleFlipBtn = document.getElementById('toggleFlipBtn');
+
+  // 방 접속 상태 및 대기 알림 오버레이 DOM
+  const connectingStatusOverlay = document.getElementById('connectingStatusOverlay');
+  const connectingStatusTitle = document.getElementById('connectingStatusTitle');
+  const connectingStatusSub = document.getElementById('connectingStatusSub');
+  const waitingPeerNotice = document.getElementById('waitingPeerNotice');
 
   // 보안 인증 모달 & 차단 오버레이 DOM
   const authModal = document.getElementById('authModal');
@@ -873,6 +882,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     userCountBadge.textContent = `Participants: ${totalUsers}/4`;
   }
 
+  // 🔄 방 접속 중 로딩 상태 표시 헬퍼
+  function setJoinLoadingState(isLoading) {
+    if (joinBtnSpinner) joinBtnSpinner.classList.toggle('hidden', !isLoading);
+    if (joinBtnArrow) joinBtnArrow.classList.toggle('hidden', isLoading);
+    if (joinBtnText) joinBtnText.textContent = isLoading ? '접속 중...' : 'Join Video Call';
+    if (joinCallBtn) joinCallBtn.disabled = isLoading;
+  }
+
   // 6. 화상 통화 방 입장 실행 함수 (수동 입장 및 F5 새로고침 자동 복원 공통)
   function executeJoinRoom(roomId, nickname) {
     if (!roomId) roomId = roomIdInput.value.trim() || 'room-101';
@@ -890,6 +907,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       roomId: currentRoomId,
       nickname: currentNickname
     }));
+
+    // ⏳ 방 접속 중 로딩 UI 및 오버레이 활성화
+    setJoinLoadingState(true);
+    if (connectingStatusOverlay) {
+      connectingStatusOverlay.classList.remove('hidden');
+      if (connectingStatusTitle) connectingStatusTitle.textContent = '방에 접속 중...';
+      if (connectingStatusSub) connectingStatusSub.textContent = '시그널링 서버 및 미디어 스트림을 연결하고 있습니다.';
+    }
+    if (waitingPeerNotice) {
+      waitingPeerNotice.classList.add('hidden');
+    }
 
     // 뷰티 & 메이크업 필터가 적용된 Canvas에서 실시간 비디오 스트림 추출
     const filteredVideoStream = filterProcessor.getFilteredStream(30);
@@ -914,6 +942,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     webrtcManager = new WebRTCManager({
       socketUrl: SIGNALING_URL,
       authKey: currentAccessKey,
+      onConnected: () => {
+        console.log('✅ 시그널링 서버 및 방 접속 성공!');
+        if (connectingStatusTitle) connectingStatusTitle.textContent = '방 접속 완료!';
+        if (connectingStatusSub) connectingStatusSub.textContent = '화상 통화 세션이 활성화되었습니다.';
+        setTimeout(() => {
+          if (connectingStatusOverlay) connectingStatusOverlay.classList.add('hidden');
+          setJoinLoadingState(false);
+          // 아직 다른 참가자가 없을 경우 대기 알림 표시
+          if (remoteUsersCount === 0 && waitingPeerNotice) {
+            waitingPeerNotice.classList.remove('hidden');
+          }
+        }, 450);
+      },
       onRemoteStream: (socketId, rNickname, stream) => {
         addRemoteVideo(socketId, rNickname, stream);
       },
@@ -921,6 +962,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         removeRemoteVideo(socketId);
       },
       onError: (msg) => {
+        setJoinLoadingState(false);
+        if (connectingStatusOverlay) connectingStatusOverlay.classList.add('hidden');
         alert(msg);
         leaveRoom();
       }
@@ -990,6 +1033,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       remoteUsersCount++;
       updateGridLayout();
+
+      // 다른 참여자가 입장했으므로 대기 알림 숨김
+      if (waitingPeerNotice) {
+        waitingPeerNotice.classList.add('hidden');
+      }
     } else {
       const video = card.querySelector('video');
       if (video) video.srcObject = stream;
@@ -1003,6 +1051,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.remove();
       remoteUsersCount = Math.max(0, remoteUsersCount - 1);
       updateGridLayout();
+
+      // 모든 원격 참여자가 나간 경우 다시 대기 알림 표시
+      if (remoteUsersCount === 0 && waitingPeerNotice && callView.classList.contains('active')) {
+        waitingPeerNotice.classList.remove('hidden');
+      }
     }
   }
 
@@ -1015,6 +1068,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       webrtcManager.leaveRoom();
       webrtcManager = null;
     }
+
+    // 접속 로딩 및 대기 상태 UI 초기화
+    setJoinLoadingState(false);
+    if (connectingStatusOverlay) connectingStatusOverlay.classList.add('hidden');
+    if (waitingPeerNotice) waitingPeerNotice.classList.add('hidden');
 
     // 원격 비디오 제거
     document.querySelectorAll('.remote-card').forEach(el => el.remove());

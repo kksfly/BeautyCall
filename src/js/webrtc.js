@@ -2,7 +2,7 @@
  * WebRTC 다자간(최대 4인 Full-Mesh) 연결 관리자
  */
 class WebRTCManager {
-  constructor({ socketUrl, authKey, onRemoteStream, onUserLeft, onError }) {
+  constructor({ socketUrl, authKey, onRemoteStream, onUserLeft, onError, onConnected }) {
     this.socketUrl = socketUrl || (typeof window !== 'undefined' && window.location.protocol.startsWith('http')
       ? window.location.origin
       : 'https://beautycall-server.onrender.com');
@@ -16,6 +16,7 @@ class WebRTCManager {
     this.onRemoteStream = onRemoteStream || (() => {});
     this.onUserLeft = onUserLeft || (() => {});
     this.onError = onError || (() => {});
+    this.onConnected = onConnected || (() => {});
 
     this.iceServers = {
       iceServers: [
@@ -43,6 +44,7 @@ class WebRTCManager {
 
     this.socket.on('connect', () => {
       console.log('시그널링 서버 연결 성공:', this.socket.id);
+      this.onConnected();
     });
 
     this.socket.on('room-full', ({ message }) => {
