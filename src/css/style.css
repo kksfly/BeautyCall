@@ -351,10 +351,12 @@ body {
   background-color: var(--bg-tertiary);
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 12px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
+  position: relative;
+  user-select: none;
 }
 
 .special-filter-card:hover {
@@ -369,6 +371,19 @@ body {
   box-shadow: 0 4px 14px rgba(255, 94, 138, 0.25);
 }
 
+/* 드래그 앤 드롭 순서 변경 상태 */
+.special-filter-card.dragging {
+  opacity: 0.45;
+  border: 1.5px dashed var(--accent-pink) !important;
+  transform: scale(0.98);
+}
+
+.special-filter-card.drag-over {
+  border-color: #3b82f6 !important;
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+}
+
 .special-card-title {
   font-size: 14px;
   font-weight: 600;
@@ -376,6 +391,79 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.special-card-title-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.special-card-title-left span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 카드 우측 컨트롤 (AR 배지 + 위/아래 순서 이동 버튼 + 드래그 핸들) */
+.special-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.filter-drag-handle {
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: 13px;
+  padding: 0 2px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.filter-drag-handle:hover {
+  opacity: 1;
+  color: #fff;
+}
+
+.filter-order-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.filter-order-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  font-size: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.filter-order-btn:hover:not(:disabled) {
+  background: var(--accent-pink);
+  border-color: var(--accent-pink);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.filter-order-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .special-filter-card.active .special-card-title {

@@ -164,6 +164,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const NICKNAME_STORAGE_KEY = 'beautycall_user_nickname';
   const ROOM_STORAGE_KEY = 'beautycall_user_room_id';
   const ACTIVE_CALL_SESSION_KEY = 'beautycall_active_call_session';
+  const SPECIAL_FILTER_ORDER_KEY = 'beautycall_special_filter_order';
+
+  // 현재 캐싱된 Special Filters 목록 (사용자 지정 순서 정렬 유지용)
+  let currentSpecialFilters = [];
 
   // 현재 인증 키
   let currentAccessKey = localStorage.getItem(AUTH_STORAGE_KEY) || '';
@@ -278,6 +282,205 @@ document.addEventListener('DOMContentLoaded', async () => {
   restoreSavedFilterSettings();
 
   /**
+   * 사용자가 지정하여 저장한 순서대로 Special Filters 목록을 정렬하는 함수
+   */
+  function sortSpecialFiltersBySavedOrder(items) {
+    if (!Array.isArray(items) || items.length === 0) return items;
+    try {
+      const savedRaw = localStorage.getItem(SPECIAL_FILTER_ORDER_KEY);
+      if (!savedRaw) return [...items];
+
+      const savedOrder = JSON.parse(savedRaw);
+      if (!Array.isArray(savedOrder) || savedOrder.length === 0) return [...items];
+
+      const itemMap = new Map(items.map(it => [it.id, it]));
+      const sorted = [];
+
+      // 1. 저장된 ID 순서대로 먼저 배치
+      savedOrder.forEach(id => {
+        if (itemMap.has(id)) {
+          sorted.push(itemMap.get(id));
+          itemMap.delete(id);
+        }
+      });
+
+      // 2. 서버에 새로 추가되었거나 목록에 없는 항목은 뒤에 이어서 배치
+      itemMap.forEach(item => sorted.push(item));
+      return sorted;
+    } catch (e) {
+      console.warn('Special Filter 순서 로드 실패 (기본 순서 적용):', e);
+      return [...items];
+    }
+  }
+
+  /**
+   * Special Filter의 변경된 순서를 localStorage에 영구 저장
+   */
+  function saveSpecialFilterOrder(items) {
+    try {
+      const order = items.map(it => it.id);
+      localStorage.setItem(SPECIAL_FILTER_ORDER_KEY, JSON.stringify(order));
+      console.log('💾 Special Filter 순서 저장 완료:', order);
+    } catch (e) {
+      console.warn('Special Filter 순서 저장 실패:', e);
+    }
+  }
+
+  /**
+   * Special Filter 항목 위치 이동 (위/아래 또는 드래그 앤 드롭)
+   */
+  function moveSpecialFilter(fromIdx, toIdx) {
+    if (toIdx < 0 || toIdx >= currentSpecialFilters.length || fromIdx === toIdx) return;
+
+    const [movedItem] = currentSpecialFilters.splice(fromIdx, 1);
+    currentSpecialFilters.splice(toIdx, 0, movedItem);
+
+    // 1. 변경된 순서 영구 저장
+    saveSpecialFilterOrder(currentSpecialFilters);
+
+    // 2. 대기실 및 통화 중 드로어 모두 즉시 재렌더링
+    renderSpecialFilterCardsUI();
+  }
+
+  /**
+   * Special Filter 카드 렌더링 헬퍼 함수
+   */
+  function createSpecialCards(listElement, items, isSmall = false) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    items.forEach((item, index) => {
+      const card = document.createElement('div');
+      card.className = `special-filter-card ${isSmall ? 'small' : ''}`;
+      card.dataset.preset = item.id;
+      card.draggable = true;
+
+      if (filterProcessor.settings.preset === item.id) {
+        card.classList.add('active');
+      }
+
+      // 1. 카드 헤더 (좌측: 아이콘+이름, 우측: 컨트롤 박스)
+      const title = document.createElement('div');
+      title.className = 'special-card-title';
+
+      const titleLeft = document.createElement('div');
+      titleLeft.className = 'special-card-title-left';
+      titleLeft.innerHTML = `<span>${item.name}</span>`;
+
+      // 우측 순서 변경 컨트롤 (▲ / ▼ 및 드래그 핸들)
+      const actions = document.createElement('div');
+      actions.className = 'special-card-actions';
+
+      // 위/아래 이동 버튼 그룹
+      const orderBtnGroup = document.createElement('div');
+      orderBtnGroup.className = 'filter-order-btn-group';
+
+      const upBtn = document.createElement('button');
+      upBtn.className = 'filter-order-btn';
+      upBtn.title = '위로 이동';
+      upBtn.innerHTML = '▲';
+      if (index === 0) upBtn.disabled = true;
+      upBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveSpecialFilter(index, index - 1);
+      });
+
+      const downBtn = document.createElement('button');
+      downBtn.className = 'filter-order-btn';
+      downBtn.title = '아래로 이동';
+      downBtn.innerHTML = '▼';
+      if (index === items.length - 1) downBtn.disabled = true;
+      downBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveSpecialFilter(index, index + 1);
+      });
+
+      orderBtnGroup.appendChild(upBtn);
+      orderBtnGroup.appendChild(downBtn);
+
+      // 드래그 핸들 (데스크탑 마우스 드래그 힌트)
+      const dragHandle = document.createElement('span');
+      dragHandle.className = 'filter-drag-handle';
+      dragHandle.title = '드래그하여 순서 변경';
+      dragHandle.textContent = '⋮⋮';
+
+      actions.appendChild(orderBtnGroup);
+      actions.appendChild(dragHandle);
+
+      title.appendChild(titleLeft);
+      title.appendChild(actions);
+
+      // 2. 카드 설명
+      const desc = document.createElement('div');
+      desc.className = 'special-card-desc';
+      desc.textContent = item.desc || 'Special AR makeup mask effect.';
+
+      card.appendChild(title);
+      card.appendChild(desc);
+
+      // 3. 카드 선택 클릭 이벤트
+      card.addEventListener('click', () => {
+        filterProcessor.setPreset(item.id);
+
+        document.querySelectorAll(`[data-preset]`).forEach(b => {
+          b.classList.toggle('active', b.dataset.preset === item.id);
+        });
+
+        updateSliderDisplay();
+        saveFilterSettings();
+      });
+
+      // 4. 드래그 앤 드롭 (HTML5 Drag & Drop) 이벤트 바인딩
+      card.addEventListener('dragstart', (e) => {
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(index));
+      });
+
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.special-filter-card').forEach(c => c.classList.remove('drag-over'));
+      });
+
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        card.classList.add('drag-over');
+      });
+
+      card.addEventListener('dragleave', () => {
+        card.classList.remove('drag-over');
+      });
+
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        card.classList.remove('drag-over');
+
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+        if (!isNaN(fromIdx) && fromIdx !== index) {
+          moveSpecialFilter(fromIdx, index);
+        }
+      });
+
+      listElement.appendChild(card);
+    });
+  }
+
+  /**
+   * 대기실과 통화 중 드로어의 Special Filter 카드들을 정렬된 순서로 렌더링하고 활성 상태 동기화
+   */
+  function renderSpecialFilterCardsUI() {
+    createSpecialCards(specialPresetsList, currentSpecialFilters, false);
+    createSpecialCards(inCallSpecialPresetsList, currentSpecialFilters, true);
+
+    const activePreset = filterProcessor.settings.preset;
+    document.querySelectorAll(`[data-preset]`).forEach(b => {
+      b.classList.toggle('active', b.dataset.preset === activePreset);
+    });
+  }
+
+  /**
    * 서버에서 동적으로 내려받은 필터 목록을 UI 버튼으로 렌더링
    */
   function renderFilterButtons(config) {
@@ -318,53 +521,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    function createSpecialCards(listElement, items, isSmall = false) {
-      if (!listElement) return;
-      listElement.innerHTML = '';
-
-      items.forEach(item => {
-        const card = document.createElement('div');
-        card.className = `special-filter-card ${isSmall ? 'small' : ''}`;
-        card.dataset.preset = item.id;
-
-        if (filterProcessor.settings.preset === item.id) {
-          card.classList.add('active');
-        }
-
-        const title = document.createElement('div');
-        title.className = 'special-card-title';
-        title.innerHTML = `<span>${item.name}</span><span style="font-size: 11px; opacity: 0.7;">AR Mask</span>`;
-
-        const desc = document.createElement('div');
-        desc.className = 'special-card-desc';
-        desc.textContent = item.desc || 'Special AR makeup mask effect.';
-
-        card.appendChild(title);
-        card.appendChild(desc);
-
-        card.addEventListener('click', () => {
-          filterProcessor.setPreset(item.id);
-
-          document.querySelectorAll(`[data-preset]`).forEach(b => {
-            b.classList.toggle('active', b.dataset.preset === item.id);
-          });
-
-          updateSliderDisplay();
-          saveFilterSettings();
-        });
-
-        listElement.appendChild(card);
-      });
-    }
-
     if (config.basic) {
       createButtons(basicPresetsList, config.basic, false);
       createButtons(inCallBasicPresetsList, config.basic, true);
     }
 
+    // Special Filters: 저장된 사용자 지정 순서로 정렬 후 렌더링
     if (config.special) {
-      createSpecialCards(specialPresetsList, config.special, false);
-      createSpecialCards(inCallSpecialPresetsList, config.special, true);
+      currentSpecialFilters = sortSpecialFiltersBySavedOrder(config.special);
+      renderSpecialFilterCardsUI();
     }
 
     // 🛡️ 필터가 변경/삭제되었을 경우 UI 활성화 상태 및 저장 동기화
