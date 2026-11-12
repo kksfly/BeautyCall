@@ -70,6 +70,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const specialPresetsList = document.getElementById('specialPresetsList');
   const inCallBasicPresetsList = document.getElementById('inCallBasicPresetsList');
   const inCallSpecialPresetsList = document.getElementById('inCallSpecialPresetsList');
+  const tuningSlidersSection = document.getElementById('tuningSlidersSection');
+  const inCallTuningSection = document.getElementById('inCallTuningSection');
   const presetBtns = document.querySelectorAll('.preset-btn');
 
   // 메이크업 & 뷰티 슬라이더 (대기실)
@@ -165,14 +167,52 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
+    function createSpecialCards(listElement, items, isSmall = false) {
+      if (!listElement) return;
+      listElement.innerHTML = '';
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `special-filter-card ${isSmall ? 'small' : ''}`;
+        card.dataset.preset = item.id;
+
+        if (filterProcessor.settings.preset === item.id) {
+          card.classList.add('active');
+        }
+
+        const title = document.createElement('div');
+        title.className = 'special-card-title';
+        title.innerHTML = `<span>${item.name}</span><span style="font-size: 11px; opacity: 0.7;">AR Mask</span>`;
+
+        const desc = document.createElement('div');
+        desc.className = 'special-card-desc';
+        desc.textContent = item.desc || 'Special AR makeup mask effect.';
+
+        card.appendChild(title);
+        card.appendChild(desc);
+
+        card.addEventListener('click', () => {
+          filterProcessor.setPreset(item.id);
+
+          document.querySelectorAll(`[data-preset]`).forEach(b => {
+            b.classList.toggle('active', b.dataset.preset === item.id);
+          });
+
+          updateSliderDisplay();
+        });
+
+        listElement.appendChild(card);
+      });
+    }
+
     if (config.basic) {
       createButtons(basicPresetsList, config.basic, false);
       createButtons(inCallBasicPresetsList, config.basic, true);
     }
 
     if (config.special) {
-      createButtons(specialPresetsList, config.special, false);
-      createButtons(inCallSpecialPresetsList, config.special, true);
+      createSpecialCards(specialPresetsList, config.special, false);
+      createSpecialCards(inCallSpecialPresetsList, config.special, true);
     }
 
     console.log('✨ 서버 필터 목록 UI 렌더링 완료');
@@ -320,6 +360,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (specialPresetsList) specialPresetsList.classList.toggle('hidden', isBasic);
       if (inCallBasicPresetsList) inCallBasicPresetsList.classList.toggle('hidden', !isBasic);
       if (inCallSpecialPresetsList) inCallSpecialPresetsList.classList.toggle('hidden', isBasic);
+
+      // Special Filters 선택 시에는 하단 세부 조절(Tuning) 섹션을 숨김 (Basic Filters일 때만 표시)
+      if (tuningSlidersSection) tuningSlidersSection.classList.toggle('hidden', !isBasic);
+      if (inCallTuningSection) inCallTuningSection.classList.toggle('hidden', !isBasic);
     });
   });
 

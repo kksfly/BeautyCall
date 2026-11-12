@@ -89,18 +89,15 @@
               <button class="preset-btn" data-preset="monochrome">🖤 Mono</button>
             </div>
 
-            <!-- 2. Special Filters 목록 (The Best Makeup Mask 등) -->
-            <div id="specialPresetsList" class="preset-buttons">
-              <button class="preset-btn active" data-preset="bestMakeup">👑 Best Makeup</button>
-              <button class="preset-btn" data-preset="idolMask">🎀 Idol Mask</button>
-              <button class="preset-btn" data-preset="foxEyes">🦊 Fox Eyes</button>
-              <button class="preset-btn" data-preset="goldenHour">🌟 Golden Hour</button>
+            <!-- 2. Special Filters 목록 (설명과 함께 카드 리스트로 표시) -->
+            <div id="specialPresetsList" class="special-filter-list">
+              <!-- 동적으로 카드 렌더링 -->
             </div>
           </div>
 
-          <!-- 메이크업 & 뷰티 세부 조절 슬라이더 -->
-          <div class="panel-section sliders-section">
-            <h3>💄 Makeup & Facial Fine-Tuning</h3>
+          <!-- 메이크업 & 뷰티 세부 조절 슬라이더 (Basic Filters 선택 시에만 표시됨) -->
+          <div id="tuningSlidersSection" class="panel-section sliders-section hidden">
+            <h3>💄 Facial Fine-Tuning</h3>
 
             <!-- 소프트 아이라인 -->
             <div class="slider-group">
@@ -265,46 +262,48 @@
           <button class="preset-btn in-call-preset" data-preset="cool">Cool</button>
         </div>
 
-        <div id="inCallSpecialPresetsList" class="preset-buttons small">
-          <button class="preset-btn in-call-preset active" data-preset="bestMakeup">Best Makeup</button>
-          <button class="preset-btn in-call-preset" data-preset="idolMask">Idol Mask</button>
-          <button class="preset-btn in-call-preset" data-preset="foxEyes">Fox Eyes</button>
-          <button class="preset-btn in-call-preset" data-preset="goldenHour">Golden Hour</button>
+        <!-- Special Filters 목록 (드로어용) -->
+        <div id="inCallSpecialPresetsList" class="special-filter-list small">
+          <!-- 동적 카드 렌더링 -->
         </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span>Eyeliner</span>
-            <span id="inCallEyelinerVal">65%</span>
+
+        <!-- 세부 튜닝 슬라이더 (Basic Filters 선택 시에만 표시) -->
+        <div id="inCallTuningSection" class="drawer-sliders-section hidden">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Eyeliner</span>
+              <span id="inCallEyelinerVal">65%</span>
+            </div>
+            <input type="range" id="inCallEyelinerSlider" min="0" max="100" value="65">
           </div>
-          <input type="range" id="inCallEyelinerSlider" min="0" max="100" value="65">
-        </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span>Highlighter</span>
-            <span id="inCallHighlighterVal">55%</span>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Highlighter</span>
+              <span id="inCallHighlighterVal">55%</span>
+            </div>
+            <input type="range" id="inCallHighlighterSlider" min="0" max="100" value="55">
           </div>
-          <input type="range" id="inCallHighlighterSlider" min="0" max="100" value="55">
-        </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span>Cheek Blush</span>
-            <span id="inCallBlushVal">55%</span>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Cheek Blush</span>
+              <span id="inCallBlushVal">55%</span>
+            </div>
+            <input type="range" id="inCallBlushSlider" min="0" max="100" value="55">
           </div>
-          <input type="range" id="inCallBlushSlider" min="0" max="100" value="55">
-        </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span>Lip Tint</span>
-            <span id="inCallLipVal">70%</span>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Lip Tint</span>
+              <span id="inCallLipVal">70%</span>
+            </div>
+            <input type="range" id="inCallLipSlider" min="0" max="100" value="70">
           </div>
-          <input type="range" id="inCallLipSlider" min="0" max="100" value="70">
-        </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span>Skin Smoothing</span>
-            <span id="inCallSmoothingVal">75%</span>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Skin Smoothing</span>
+              <span id="inCallSmoothingVal">75%</span>
+            </div>
+            <input type="range" id="inCallSmoothingSlider" min="0" max="100" value="75">
           </div>
-          <input type="range" id="inCallSmoothingSlider" min="0" max="100" value="75">
         </div>
       </div>
     </aside>

@@ -77,7 +77,8 @@ const FILTERS_CONFIG = {
   special: [
     {
       id: 'bestMakeup',
-      name: '👑 Best Makeup',
+      name: '👑 The Best Makeup',
+      desc: 'Facebook Messenger style full glam with winged eyeliner, 3D strobing glow & velvet lips.',
       settings: {
         smoothing: 78, brightness: 112, contrast: 104, saturation: 110,
         rosyTint: 15, eyeBrighten: 45, blush: 55, lipTint: 70, eyeliner: 65, highlighter: 55
@@ -85,7 +86,8 @@ const FILTERS_CONFIG = {
     },
     {
       id: 'idolMask',
-      name: '🎀 Idol Mask',
+      name: '🎀 Idol Stage Mask',
+      desc: 'Radiant K-Pop idol stage look with luminous skin, soft lashes & coral pink lips.',
       settings: {
         smoothing: 82, brightness: 116, contrast: 102, saturation: 106,
         rosyTint: 20, eyeBrighten: 50, blush: 45, lipTint: 60, eyeliner: 40, highlighter: 60
@@ -93,7 +95,8 @@ const FILTERS_CONFIG = {
     },
     {
       id: 'foxEyes',
-      name: '🦊 Fox Eyes',
+      name: '🦊 Fox Eyes Glam',
+      desc: 'Sharp cat-eye winged liner with sleek contouring and defined eye contours.',
       settings: {
         smoothing: 72, brightness: 108, contrast: 106, saturation: 108,
         rosyTint: 10, eyeBrighten: 35, blush: 40, lipTint: 65, eyeliner: 80, highlighter: 45
@@ -101,7 +104,8 @@ const FILTERS_CONFIG = {
     },
     {
       id: 'goldenHour',
-      name: '🌟 Golden Hour',
+      name: '🌟 Golden Hour Glow',
+      desc: 'Warm amber sunset bronzing with sun-kissed peach blush and golden radiance.',
       settings: {
         smoothing: 65, brightness: 110, contrast: 105, saturation: 118,
         rosyTint: 35, eyeBrighten: 30, blush: 60, lipTint: 60, eyeliner: 45, highlighter: 65
