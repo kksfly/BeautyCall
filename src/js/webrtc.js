@@ -21,7 +21,9 @@ class WebRTCManager {
     this.iceServers = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' }
       ]
     };
   }
@@ -61,10 +63,10 @@ class WebRTCManager {
     });
 
     // 다른 사용자가 새로 입장했을 때 (기존 참가자 입장)
-    this.socket.on('user-joined', ({ socketId, nickname }) => {
+    this.socket.on('user-joined', async ({ socketId, nickname }) => {
       console.log('새 참가자 입장:', nickname, socketId);
       // 새 참가자가 offer를 보낼 것이므로 피어 커넥션만 대기 상태로 준비
-      this.createPeerConnection(socketId, nickname, false);
+      await this.createPeerConnection(socketId, nickname, false);
     });
 
     // 상대방의 Offer 수신
@@ -72,17 +74,24 @@ class WebRTCManager {
       console.log('Offer 수신:', callerSocketId);
       let peer = this.peers[callerSocketId];
       if (!peer) {
-        peer = this.createPeerConnection(callerSocketId, '상대방', false);
+        peer = await this.createPeerConnection(callerSocketId, '상대방', false);
       }
 
-      await peer.peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-      const answer = await peer.peerConnection.createAnswer();
-      await peer.peerConnection.setLocalDescription(answer);
+      try {
+        await peer.peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+        // 대기 중이던 ICE Candidate 일괄 등록
+        await this.drainIceCandidates(peer);
 
-      this.socket.emit('answer', {
-        targetSocketId: callerSocketId,
-        sdp: answer
-      });
+        const answer = await peer.peerConnection.createAnswer();
+        await peer.peerConnection.setLocalDescription(answer);
+
+        this.socket.emit('answer', {
+          targetSocketId: callerSocketId,
+          sdp: answer
+        });
+      } catch (err) {
+        console.error('Offer 처리 중 오류:', err);
+      }
     });
 
     // 상대방의 Answer 수신
@@ -90,19 +99,30 @@ class WebRTCManager {
       console.log('Answer 수신:', responderSocketId);
       const peer = this.peers[responderSocketId];
       if (peer) {
-        await peer.peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+        try {
+          await peer.peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+          // 대기 중이던 ICE Candidate 일괄 등록
+          await this.drainIceCandidates(peer);
+        } catch (err) {
+          console.error('Answer 처리 중 오류:', err);
+        }
       }
     });
 
-    // ICE Candidate 수신
+    // ICE Candidate 수신 (원격 디스크립션 설정 전이면 큐에 저장)
     this.socket.on('ice-candidate', async ({ senderSocketId, candidate }) => {
       const peer = this.peers[senderSocketId];
-      if (peer && candidate) {
+      if (!peer || !candidate) return;
+
+      if (peer.peerConnection.remoteDescription && peer.peerConnection.remoteDescription.type) {
         try {
           await peer.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) {
           console.error('ICE Candidate 추가 실패:', e);
         }
+      } else {
+        // remoteDescription이 아직 없으면 큐에 임시 보관
+        peer.iceQueue.push(candidate);
       }
     });
 
@@ -112,6 +132,23 @@ class WebRTCManager {
       this.closePeer(socketId);
       this.onUserLeft(socketId);
     });
+  }
+
+  /**
+   * 보관된 ICE Candidate들을 RTCPeerConnection에 일괄 등록
+   */
+  async drainIceCandidates(peer) {
+    if (!peer || !peer.iceQueue || peer.iceQueue.length === 0) return;
+    const candidates = [...peer.iceQueue];
+    peer.iceQueue = [];
+
+    for (const cand of candidates) {
+      try {
+        await peer.peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (e) {
+        console.warn('보관된 ICE Candidate 등록 실패:', e);
+      }
+    }
   }
 
   /**
@@ -130,13 +167,19 @@ class WebRTCManager {
   /**
    * 개별 피어 커넥션 생성 및 트랙 추가
    */
-  createPeerConnection(targetSocketId, nickname, isCaller) {
+  async createPeerConnection(targetSocketId, nickname, isCaller) {
+    if (this.peers[targetSocketId]) {
+      return this.peers[targetSocketId];
+    }
+
     const pc = new RTCPeerConnection(this.iceServers);
 
-    this.peers[targetSocketId] = {
+    const peerInfo = {
       peerConnection: pc,
-      nickname: nickname
+      nickname: nickname,
+      iceQueue: []
     };
+    this.peers[targetSocketId] = peerInfo;
 
     // 로컬 스트림(필터 적용 영상 + 오디오)의 트랙을 피어 커넥션에 추가
     if (this.localStream) {
@@ -157,29 +200,36 @@ class WebRTCManager {
 
     // 상대방의 미디어 스트림 수신 이벤트
     pc.ontrack = (event) => {
-      console.log('원격 스트림 수신:', targetSocketId, event.streams[0]);
+      console.log('원격 스트림 수신 성공:', targetSocketId, event.streams[0]);
       if (event.streams && event.streams[0]) {
         this.onRemoteStream(targetSocketId, nickname, event.streams[0]);
       }
     };
 
-    // 통화 발신자(Caller)인 경우 Offer 생성 및 전송
+    // 피어 연결 상태 로깅 및 끊김 감지
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[ICE State: ${targetSocketId}]`, pc.iceConnectionState);
+      if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+        console.warn(`[ICE Disconnected] ${targetSocketId}`);
+      }
+    };
+
+    // 통화 발신자(Caller)인 경우 지연 없이 직접 Offer 생성 및 즉시 전송
     if (isCaller) {
-      pc.onnegotiationneeded = async () => {
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          this.socket.emit('offer', {
-            targetSocketId: targetSocketId,
-            sdp: offer
-          });
-        } catch (err) {
-          console.error('Offer 생성 오류:', err);
-        }
-      };
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        this.socket.emit('offer', {
+          targetSocketId: targetSocketId,
+          sdp: offer
+        });
+        console.log('Offer 전송 완료 ->', targetSocketId);
+      } catch (err) {
+        console.error('Offer 생성 오류:', err);
+      }
     }
 
-    return this.peers[targetSocketId];
+    return peerInfo;
   }
 
   /**

@@ -456,6 +456,21 @@ io.on('connection', (socket) => {
       rooms[roomId] = {};
     }
 
+    // 🛡️ F5 새로고침 등 동일 닉네임의 이전 유령 소켓이 남아있는 경우 즉시 정리
+    if (nickname) {
+      for (const existingId of Object.keys(rooms[roomId])) {
+        if (existingId !== socket.id && rooms[roomId][existingId]?.nickname === nickname) {
+          console.warn(`[Cleanup Ghost Socket] 동일 닉네임(${nickname})의 이전 소켓(${existingId})을 정리합니다.`);
+          delete rooms[roomId][existingId];
+          const oldSocket = io.sockets.sockets.get(existingId);
+          if (oldSocket) {
+            oldSocket.leave(roomId);
+            oldSocket.disconnect(true);
+          }
+        }
+      }
+    }
+
     const currentUsers = Object.keys(rooms[roomId]);
     if (currentUsers.length >= MAX_USERS_PER_ROOM) {
       socket.emit('room-full', { message: 'The room is full (Maximum 4 participants).' });
