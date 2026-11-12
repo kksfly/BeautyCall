@@ -661,22 +661,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     requestAnimationFrame(loop);
   }
 
-  // 2. 웹캠 및 마이크 스트림 가져오기
+  // 2. 웹캠 및 마이크 스트림 안전 획득 (재시도 및 장치 경합 방지 로직)
+  async function acquireUserMedia(retryCount = 0) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true
+      });
+    } catch (err) {
+      console.warn(`[getUserMedia 시도 ${retryCount + 1} 실패]`, err.name, err.message);
+
+      // 이전 세션 종료 직후 OS 레벨의 카메라 점유 해제 지연(NotReadableError / AbortError / TrackStartError) 시 자동 재시도
+      if (retryCount < 2 && (err.name === 'NotReadableError' || err.name === 'AbortError' || err.name === 'TrackStartError')) {
+        await new Promise(res => setTimeout(res, 450));
+        return acquireUserMedia(retryCount + 1);
+      }
+
+      // 오디오 장치 충돌 또는 마이크 부재 시 비디오만 우선 획득 fallback 시도
+      try {
+        console.warn('오디오 제외 비디오 단독 스트림 fallback 시도');
+        return await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (videoOnlyErr) {
+        throw err;
+      }
+    }
+  }
+
   try {
-    rawStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: true
-    });
-    rawVideo.srcObject = rawStream;
-    await rawVideo.play();
+    rawStream = await acquireUserMedia();
+    if (rawVideo) {
+      rawVideo.muted = true;
+      rawVideo.srcObject = rawStream;
+      // play()의 Promise 거부가 발생하더라도 뷰티 필터 엔진 가동을 방해하지 않음
+      try {
+        await rawVideo.play();
+      } catch (playErr) {
+        console.warn('rawVideo.play() 자동 재생 대기 (영상 스트림은 정상 수신 중):', playErr);
+      }
+    }
 
     // 뷰티 필터 엔진 시작
     filterProcessor.start(rawVideo);
     startSyncPreviewLoop();
     tryAutoRejoinCall();
   } catch (err) {
-    console.error('카메라/마이크 접근 권한 실패:', err);
-    alert('Unable to access camera or microphone. Please check your permissions.');
+    console.error('카메라/마이크 최종 접근 실패:', err);
+    // 실제 사용자가 권한을 차단한 경우(NotAllowedError / PermissionDeniedError)에만 알림 표시
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      alert('Unable to access camera or microphone. Please check your browser permissions.');
+    } else {
+      console.warn('일시적인 장치 오류 (스트림 백그라운드 복구 대기):', err);
+    }
   }
 
   // 3. 슬라이더 수치 및 상태 동기화 함수
