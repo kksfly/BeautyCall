@@ -356,6 +356,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
     .catch(err => {
       console.warn('원격 필터 로드 실패(로컬 기본값 사용):', err);
+      const localConfig = {
+        basic: [
+          { id: 'none', name: 'Original' },
+          { id: 'smooth', name: '🌸 Smooth' },
+          { id: 'kbeauty', name: '✨ K-Beauty' },
+          { id: 'glamour', name: '💄 Glamour' },
+          { id: 'warm', name: '☀️ Warm' },
+          { id: 'cool', name: '❄️ Cool' },
+          { id: 'vintage', name: '🎞️ Vintage' },
+          { id: 'monochrome', name: '🖤 Mono' }
+        ],
+        special: [
+          { id: 'poop', name: '💩 Poop on Head', desc: 'Flawless beauty skin + a cute funny poop on your head tracking your movement!' },
+          { id: 'catEars', name: '🐱 Cute Kitty', desc: 'Porcelain skin + adorable pink cat ears, whiskers and jelly nose.' },
+          { id: 'crown', name: '👑 Royal Crown', desc: 'Luminous royal glam + a glowing golden crown on your head with sparkling stars.' },
+          { id: 'sunglasses', name: '🕶️ Cool Shades', desc: 'Sleek beauty skin + cool dark sunglasses fitting right on your eyes.' },
+          { id: 'dotMask', name: '⚪ Cyber Dot Mask', desc: 'Hypnotic matrix dots covering your face with crystal clear eyes.' }
+        ]
+      };
+      renderFilterButtons(localConfig);
+      updateSliderDisplay();
     });
 
   // 대기실 소켓 연결 (실시간 필터 업데이트 이벤트 수신용)

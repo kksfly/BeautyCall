@@ -128,6 +128,18 @@ class BeautyFilterProcessor {
         eyeBrighten: 30,
         blush: 40,
         lipTint: 60
+      },
+      dotMask: {
+        specialType: 'dotMask',
+        smoothing: 80,      // 하얀 도트 매트릭스 마스크
+        brightness: 75,     // 흑백 사이버 분위기
+        contrast: 135,
+        saturation: 0,
+        rosyTint: 0,
+        vignette: true,
+        eyeBrighten: 65,
+        blush: 0,
+        lipTint: 0
       }
     };
 
@@ -632,6 +644,111 @@ class BeautyFilterProcessor {
       this.ctx.moveTo(halfDist - lensW * 0.28, -lensH * 0.35);
       this.ctx.lineTo(halfDist + lensW * 0.15, lensH * 0.3);
       this.ctx.stroke();
+    }
+
+    // 5. ⚪ Cyber Dot Mask (눈을 제외한 나머지 얼굴과 목을 하얀색 점들로 덮는 3D AR 효과)
+    else if (type === 'dotMask') {
+      const lm = this.landmarks;
+      if (!lm) {
+        this.ctx.restore();
+        return;
+      }
+
+      // 얼굴 윤곽선 Path2D 생성
+      const facePath = new Path2D();
+      let minX = width, maxX = 0, minY = height, maxY = 0;
+
+      for (let i = 0; i < this.faceOvalIndices.length; i++) {
+        const idx = this.faceOvalIndices[i];
+        const px = lm[idx].x * width;
+        const py = lm[idx].y * height;
+        if (i === 0) facePath.moveTo(px, py);
+        else facePath.lineTo(px, py);
+
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+      }
+      facePath.closePath();
+
+      // 턱 아래 목 부분 점 영역 (이미지와 동일하게 턱 밑에도 도트 배치)
+      const chinBottom = lm[152];
+      const neckPath = new Path2D();
+      const faceWidth = maxX - minX;
+      const neckRadiusX = faceWidth * 0.26;
+      const neckRadiusY = (maxY - minY) * 0.16;
+      const neckCenterX = chinBottom.x * width;
+      const neckCenterY = chinBottom.y * height + neckRadiusY * 0.95;
+      neckPath.ellipse(neckCenterX, neckCenterY, neckRadiusX, neckRadiusY, 0, 0, Math.PI * 2);
+
+      const eyeDist = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
+
+      // 도트 격자 크기 및 간격 (얼굴 크기에 비례하는 최적 밀도)
+      const spacing = Math.max(7, Math.round(faceWidth * 0.038)); // 점 간격
+      const dotRadius = Math.max(1.6, faceWidth * 0.0078);        // 점 반지름
+
+      // 눈 제외 타원 크기 (양쪽 눈동자와 눈꺼풀 주변을 깔끔하게 비움)
+      const eyeExclusionW = eyeDist * 0.42;
+      const eyeExclusionH = eyeDist * 0.28;
+
+      // 얼굴 회전 각도(angle)에 맞춘 엇갈린 육각 격자(Hexagonal Matrix) 생성
+      const faceCenterX = (leftEye.x + rightEye.x) / 2;
+      const faceCenterY = ((leftEye.y + rightEye.y) / 2 + chinBottom.y * height) / 2;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+
+      const faceRadius = scale * 0.95;
+      const rowStep = spacing * 0.866; // 정육각 격자 높이 비율
+
+      this.ctx.save();
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.75)';
+      this.ctx.shadowBlur = Math.max(2, dotRadius * 0.8);
+
+      this.ctx.beginPath();
+
+      const yStart = -faceRadius * 1.35;
+      const yEnd = faceRadius * 1.45;
+      const xStart = -faceRadius * 1.25;
+      const xEnd = faceRadius * 1.25;
+
+      for (let localY = yStart; localY <= yEnd; localY += rowStep) {
+        const row = Math.round(localY / rowStep);
+        const xOffset = (Math.abs(row) % 2 === 1) ? spacing * 0.5 : 0;
+
+        for (let localX = xStart; localX <= xEnd; localX += spacing) {
+          const rx = localX + xOffset;
+          const ry = localY;
+
+          // 얼굴 회전 각도 적용 절대 좌표 변환
+          const px = faceCenterX + rx * cos - ry * sin;
+          const py = faceCenterY + rx * sin + ry * cos;
+
+          // 1. 얼굴 영역 또는 목 영역 내부인지 확인
+          const isInsideFace = this.ctx.isPointInPath(facePath, px, py);
+          const isInsideNeck = this.ctx.isPointInPath(neckPath, px, py);
+
+          if (isInsideFace || isInsideNeck) {
+            // 2. 왼쪽 눈 내부인지 확인 (제외)
+            const dxL = (px - leftEye.x) / eyeExclusionW;
+            const dyL = (py - leftEye.y) / eyeExclusionH;
+            if (dxL * dxL + dyL * dyL < 1.0) continue;
+
+            // 3. 오른쪽 눈 내부인지 확인 (제외)
+            const dxR = (px - rightEye.x) / eyeExclusionW;
+            const dyR = (py - rightEye.y) / eyeExclusionH;
+            if (dxR * dxR + dyR * dyR < 1.0) continue;
+
+            // 4. 유효한 도트 그리기 (단일 Path로 초고속 렌더링)
+            this.ctx.moveTo(px + dotRadius, py);
+            this.ctx.arc(px, py, dotRadius, 0, Math.PI * 2);
+          }
+        }
+      }
+
+      this.ctx.fill();
+      this.ctx.restore();
     }
 
     this.ctx.restore();
