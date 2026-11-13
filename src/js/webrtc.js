@@ -30,7 +30,24 @@ class WebRTCManager {
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' }
+        { urls: 'stun:global.stun.twilio.com:3478' },
+        { urls: 'stun:openrelay.metered.ca:80' },
+        // 🚀 모바일 LTE/5G 통신망(Symmetric NAT) 및 다른 Wi-Fi 환경 연결을 위한 OpenRelay 무료 TURN Relay 서버
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
       ]
     };
   }
@@ -182,6 +199,31 @@ class WebRTCManager {
   }
 
   /**
+   * 🍎 Safari & Chrome 간 교차 호환성을 위한 H.264 코덱 우선순위 지정
+   */
+  preferH264Codec(pc) {
+    try {
+      if (typeof RTCRtpSender !== 'undefined' && RTCRtpSender.getCapabilities) {
+        const capabilities = RTCRtpSender.getCapabilities('video');
+        if (capabilities && capabilities.codecs) {
+          const h264Codecs = capabilities.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+          const otherCodecs = capabilities.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
+          const preferredOrder = [...h264Codecs, ...otherCodecs];
+          pc.getTransceivers().forEach(transceiver => {
+            if (transceiver.receiver && transceiver.receiver.track && transceiver.receiver.track.kind === 'video') {
+              if (typeof transceiver.setCodecPreferences === 'function') {
+                transceiver.setCodecPreferences(preferredOrder);
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[preferH264Codec] Skipped:', e);
+    }
+  }
+
+  /**
    * 방 입장 요청
    */
   joinRoom(roomId) {
@@ -265,11 +307,23 @@ class WebRTCManager {
       }
     };
 
-    // 피어 연결 상태 로깅 및 끊김 감지
+    // 🍎 Safari & Chrome 교차 호환성을 위한 H.264 코덱 우선순위 지정
+    this.preferH264Codec(pc);
+
+    // 피어 연결 상태 로깅 및 끊김/실패 시 자동 ICE 재시작
     pc.oniceconnectionstatechange = () => {
       console.log(`[ICE State: ${targetSocketId}]`, pc.iceConnectionState);
-      if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-        console.warn(`[ICE Disconnected] ${targetSocketId}`);
+      if (pc.iceConnectionState === 'failed') {
+        console.warn(`[ICE Failed: ${targetSocketId}] Attempting ICE restart...`);
+        if (typeof pc.restartIce === 'function') {
+          try {
+            pc.restartIce();
+          } catch (e) {
+            console.warn('ICE restart error:', e);
+          }
+        }
+      } else if (pc.iceConnectionState === 'disconnected') {
+        console.warn(`[ICE Disconnected: ${targetSocketId}]`);
       }
     };
 

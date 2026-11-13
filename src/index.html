@@ -101,8 +101,8 @@
     </div>
   </div>
 
-  <!-- 숨겨진 원본 웹캠 비디오 요소 (캔버스 렌더링 소스) -->
-  <video id="rawWebcam" autoplay playsinline muted style="display: none;"></video>
+  <!-- 숨겨진 원본 웹캠 비디오 요소 (iOS 사파리 throttle 방지를 위해 1px 투명 오프스크린 배치) -->
+  <video id="rawWebcam" autoplay playsinline webkit-playsinline muted style="position: fixed; top: -9999px; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;"></video>
 
   <!-- ================= [1. 대기실 / 프리뷰 화면] ================= -->
   <section id="lobbyView" class="view active">

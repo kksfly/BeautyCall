@@ -1144,14 +1144,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       waitingPeerNotice.classList.add('hidden');
     }
 
-    // 뷰티 & 메이크업 필터가 적용된 Canvas에서 실시간 비디오 스트림 추출
-    const filteredVideoStream = filterProcessor.getFilteredStream(30);
-    const filteredVideoTrack = filteredVideoStream.getVideoTracks()[0];
+    // 뷰티 & 메이크업 필터가 적용된 Canvas에서 실시간 비디오 스트림 추출 (모바일 fallback 지원)
+    let videoTrackToSend = null;
+    try {
+      const filteredVideoStream = filterProcessor.getFilteredStream(30);
+      videoTrackToSend = filteredVideoStream && filteredVideoStream.getVideoTracks()[0];
+    } catch (e) {
+      console.warn('Canvas captureStream error:', e);
+    }
+    // Canvas 캡처 트랙이 없는 경우 원본 웹캠 트랙 fallback
+    if (!videoTrackToSend && rawStream && rawStream.getVideoTracks().length > 0) {
+      console.warn('Fallback to raw webcam video track');
+      videoTrackToSend = rawStream.getVideoTracks()[0];
+    }
 
     // 원본 마이크 오디오 트랙 결합
     const combinedStream = new MediaStream();
-    if (filteredVideoTrack) {
-      combinedStream.addTrack(filteredVideoTrack);
+    if (videoTrackToSend) {
+      combinedStream.addTrack(videoTrackToSend);
     }
     if (rawStream && rawStream.getAudioTracks().length > 0) {
       combinedStream.addTrack(rawStream.getAudioTracks()[0]);
@@ -1226,7 +1236,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`🚀 [통화 방 입장 완료] Room: ${currentRoomId}, Nickname: ${currentNickname}`);
   }
 
+  // 🔊 모바일 사파리 오디오 서브시스템 사전 잠금 해제 (사용자 제스처 컨텍스트)
+  let audioContextUnlocked = false;
+  function unlockMobileAudio() {
+    if (audioContextUnlocked) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+      }
+      audioContextUnlocked = true;
+      console.log('🔊 [Audio Unlocked] Mobile audio subsystem is primed.');
+    } catch (e) {
+      console.warn('Audio unlock skipped:', e);
+    }
+  }
+
+  // 🔊 모바일 오디오 재생 차단 시 소리 켜기(Unmute) 안내 배지 띄우기
+  function showUnmuteButton(card, video) {
+    if (card.querySelector('.unmute-pill-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'unmute-pill-btn';
+    btn.innerHTML = '🔊 Tap for sound';
+    btn.title = 'Tap to enable sound on mobile';
+
+    const triggerUnmute = (e) => {
+      if (e) e.stopPropagation();
+      video.muted = false;
+      video.play().then(() => {
+        btn.remove();
+        console.log('🔊 [Audio Unmuted by User Tap]');
+      }).catch(err => {
+        console.warn('Unmute tap failed:', err);
+      });
+    };
+
+    btn.addEventListener('click', triggerUnmute);
+    btn.addEventListener('touchend', triggerUnmute);
+    card.appendChild(btn);
+  }
+
   joinCallBtn.addEventListener('click', () => {
+    unlockMobileAudio();
     const nick = nicknameInput.value.trim() || 'User';
     const room = roomIdInput.value.trim() || 'room-101';
     executeJoinRoom(room, nick);
@@ -1254,7 +1314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 상대방 비디오 타일 동적 추가
+  // 상대방 비디오 타일 동적 추가 (모바일 Safari Autoplay & playsinline 완벽 대응)
   function addRemoteVideo(socketId, nickname, stream) {
     let card = document.getElementById(`remote-${socketId}`);
     if (!card) {
@@ -1263,8 +1323,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.className = 'video-card remote-card';
 
       const video = document.createElement('video');
-      video.autoplay = true;
+      // 🍎 iOS Safari 인라인 및 자동 재생 필수 속성 부여
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.setAttribute('autoplay', 'true');
       video.playsInline = true;
+      video.autoplay = true;
+      video.controls = false;
       video.srcObject = stream;
 
       const meta = document.createElement('div');
@@ -1280,9 +1345,51 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 다른 참여자가 입장했으므로 대기 알림 숨김
       hideWaitingPeerNotice();
+
+      // 🎬 비디오 재생 시도 (모바일 자동 재생 정책 방어)
+      const attemptPlay = () => {
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log(`✅ [Remote Video Playing OK] ${socketId}`);
+          }).catch(err => {
+            console.warn(`⚠️ [Autoplay Blocked on Mobile Safari] Falling back to muted playback:`, err);
+            // 1차 방어: 일단 화면이라도 검은 화면 없이 나오도록 muted로 재생
+            video.muted = true;
+            video.play().then(() => {
+              console.log(`✅ [Remote Video Playing Muted] ${socketId}`);
+              // 사용자에게 소리 켜기 안내 버튼 표시
+              showUnmuteButton(card, video);
+            }).catch(err2 => {
+              console.error(`❌ [Remote Video Play completely failed]:`, err2);
+            });
+          });
+        }
+      };
+
+      video.onloadedmetadata = () => {
+        attemptPlay();
+      };
+      attemptPlay();
+
+      // 화면 카드 아무 곳이나 터치/클릭 시에도 음소거 해제 시도
+      const onCardGesture = () => {
+        if (video.muted) {
+          video.muted = false;
+          video.play().then(() => {
+            const btn = card.querySelector('.unmute-pill-btn');
+            if (btn) btn.remove();
+          }).catch(() => {});
+        }
+      };
+      card.addEventListener('click', onCardGesture);
+      card.addEventListener('touchend', onCardGesture);
     } else {
       const video = card.querySelector('video');
-      if (video) video.srcObject = stream;
+      if (video) {
+        video.srcObject = stream;
+        video.play().catch(() => {});
+      }
     }
   }
 

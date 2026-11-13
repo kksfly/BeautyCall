@@ -698,6 +698,36 @@ input[type="range"] {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* 🔊 모바일 사파리 오디오 언락 플로팅 버튼 */
+.unmute-pill-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  background: rgba(255, 45, 120, 0.92);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 15px rgba(255, 45, 120, 0.5), 0 0 10px rgba(0, 0, 0, 0.5);
+  padding: 8px 14px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulseUnmute 1.6s infinite;
+  transition: all 0.2s ease;
+}
+.unmute-pill-btn:hover {
+  background: #ff2d78;
+  transform: scale(1.05);
+}
+@keyframes pulseUnmute {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.06); opacity: 0.88; }
+}
+
 .filter-indicator {
   color: #ff8ea3;
   font-size: 11px;

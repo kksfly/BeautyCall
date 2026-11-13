@@ -164,3 +164,4 @@ module.exports = {
   formatKST,
   formatDuration
 };
+
