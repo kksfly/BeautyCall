@@ -308,6 +308,7 @@ function renderStatusDashboard({ activeRooms = {}, history = [], uptime = 0, ser
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-wrap: wrap;
     }
     .btn {
       display: inline-flex;
@@ -335,6 +336,48 @@ function renderStatusDashboard({ activeRooms = {}, history = [], uptime = 0, ser
     .btn:hover {
       opacity: 0.92;
       transform: translateY(-1px);
+    }
+    /* 복구 배너 */
+    .restore-banner {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(239, 68, 68, 0.18));
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      border-radius: 16px;
+      padding: 16px 22px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.3s ease;
+    }
+    .restore-banner-text {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #fef3c7;
+    }
+    .restore-banner-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-restore {
+      background: #f59e0b;
+      color: #000000;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .btn-restore:hover {
+      background: #fbbf24;
+      transform: scale(1.03);
     }
 
     /* Stats bar */
@@ -550,9 +593,14 @@ function renderStatusDashboard({ activeRooms = {}, history = [], uptime = 0, ser
           <span class="dot"></span> Auto-refreshes every 10s
         </div>
         <a href="/status?key=${encodeURIComponent(accessKey)}" class="btn btn-secondary">🔄 Refresh</a>
+        <button id="importJsonBtn" class="btn btn-secondary" title="Upload connection_history.json to restore server logs">📥 Import JSON</button>
+        <input type="file" id="jsonFileInput" accept=".json" style="display: none;" />
         <a href="/api/status/export?key=${encodeURIComponent(accessKey)}" class="btn btn-primary" download="connection_history.json">💾 Export JSON</a>
       </div>
     </header>
+
+    <!-- ⚠️ 서버 재시작 시 브라우저 백업 복구 안내 배너 (JS에 의해 동적 노출) -->
+    <div id="restoreBannerContainer"></div>
 
     <!-- Stat boxes -->
     <div class="stats-grid">
@@ -628,6 +676,114 @@ function renderStatusDashboard({ activeRooms = {}, history = [], uptime = 0, ser
       </div>
     </div>
   </div>
+
+  <script>
+    const ACCESS_KEY = ${JSON.stringify(accessKey)};
+    const serverHistory = ${JSON.stringify(history)};
+    const BACKUP_KEY = 'beautycall_admin_history_backup';
+
+    // 1. 서버에 히스토리가 있으면 브라우저 로컬 스토리지에 자동 백업
+    if (Array.isArray(serverHistory) && serverHistory.length > 0) {
+      try {
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(serverHistory));
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
+      }
+    } else {
+      // 2. 서버 히스토리가 0건인데 브라우저에 이전 백업이 남아있다면 복구 배너 노출!
+      try {
+        const saved = localStorage.getItem(BACKUP_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            renderRestoreNotice(parsed);
+          }
+        }
+      } catch (e) {
+        console.warn('LocalStorage read failed:', e);
+      }
+    }
+
+    function renderRestoreNotice(backupList) {
+      const container = document.getElementById('restoreBannerContainer');
+      if (!container) return;
+
+      container.innerHTML = \`
+        <div class="restore-banner">
+          <div class="restore-banner-text">
+            <span style="font-size: 22px;">⚠️</span>
+            <div>
+              <strong>Server Restart Detected:</strong> Server logs appear empty, but <strong>\${backupList.length} logs</strong> are preserved in your browser backup!
+            </div>
+          </div>
+          <div class="restore-banner-actions">
+            <button id="restoreNowBtn" class="btn-restore">🔄 Restore \${backupList.length} Logs to Server</button>
+            <button id="dismissBannerBtn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Dismiss</button>
+          </div>
+        </div>
+      \`;
+
+      document.getElementById('restoreNowBtn')?.addEventListener('click', () => {
+        sendRestorePayload(backupList);
+      });
+
+      document.getElementById('dismissBannerBtn')?.addEventListener('click', () => {
+        container.innerHTML = '';
+      });
+    }
+
+    // 서버로 복원 데이터 전송
+    async function sendRestorePayload(historyArray) {
+      try {
+        const res = await fetch('/api/status/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: ACCESS_KEY, history: historyArray, isMerge: true })
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert(\`Successfully restored \${result.count} history logs to server!\`);
+          window.location.reload();
+        } else {
+          alert('Restore failed: ' + (result.message || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Restore request failed: ' + err.message);
+      }
+    }
+
+    // 3. 파일 업로드(Import JSON) 버튼 연동
+    const importBtn = document.getElementById('importJsonBtn');
+    const fileInput = document.getElementById('jsonFileInput');
+
+    if (importBtn && fileInput) {
+      importBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const parsed = JSON.parse(event.target.result);
+            if (!Array.isArray(parsed)) {
+              alert('Invalid format: JSON file must contain an array of history logs.');
+              return;
+            }
+            if (confirm(\`Upload and restore \${parsed.length} logs from "\${file.name}" to the server?\`)) {
+              sendRestorePayload(parsed);
+            }
+          } catch (err) {
+            alert('Failed to parse JSON file: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
+  </script>
 </body>
 </html>`;
 }

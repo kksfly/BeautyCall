@@ -414,11 +414,11 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  // 5. 📊 실시간 상태 및 접속 이력 대시보드 (/status, /api/status, /api/status/export)
-  if (parsedUrl.pathname === '/status' || parsedUrl.pathname === '/api/status' || parsedUrl.pathname === '/api/status/export') {
+  // 5. 📊 실시간 상태 및 접속 이력 대시보드 (/status, /api/status, /api/status/export, /api/status/restore)
+  if (parsedUrl.pathname === '/status' || parsedUrl.pathname === '/api/status' || parsedUrl.pathname === '/api/status/export' || parsedUrl.pathname === '/api/status/restore') {
     const cookies = parseCookies(req);
 
-    const handleStatusRequest = (providedKey) => {
+    const handleStatusRequest = (providedKey, parsedBody = null) => {
       // 키 검증: 본문 전달 키 > 쿼리 키 > 쿠키 > 헤더 순
       const keyCandidate = providedKey ||
                            parsedUrl.searchParams.get('key') ||
@@ -433,7 +433,24 @@ const server = http.createServer((req, res) => {
         ipTracker.delete(clientIp);
         const cookieHeader = `beautycall_admin_key=${encodeURIComponent(ACCESS_KEY)}; Path=/; Max-Age=86400; SameSite=Lax`;
 
-        // A. 접속 이력 JSON 파일 다운로드 (/api/status/export)
+        // A. 접속 이력 복원/동기화 API (/api/status/restore)
+        if (parsedUrl.pathname === '/api/status/restore') {
+          const entriesToRestore = parsedBody?.history || (Array.isArray(parsedBody) ? parsedBody : []);
+          const isMerge = parsedBody?.isMerge !== false;
+          const result = historyLogger.restoreHistory(entriesToRestore, isMerge);
+          res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Set-Cookie': cookieHeader
+          });
+          res.end(JSON.stringify({
+            success: result.success,
+            count: result.count,
+            message: `Successfully synced ${result.count} history logs.`
+          }));
+          return;
+        }
+
+        // B. 접속 이력 JSON 파일 다운로드 (/api/status/export)
         if (parsedUrl.pathname === '/api/status/export') {
           res.writeHead(200, {
             'Content-Type': 'application/json; charset=utf-8',
@@ -444,7 +461,7 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        // B. 상태 JSON 데이터 API (/api/status)
+        // C. 상태 JSON 데이터 API (/api/status)
         if (parsedUrl.pathname === '/api/status') {
           res.writeHead(200, {
             'Content-Type': 'application/json; charset=utf-8',
@@ -460,7 +477,7 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        // C. 웹 대시보드 화면 렌더링 (/status)
+        // D. 웹 대시보드 화면 렌더링 (/status)
         res.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'Set-Cookie': cookieHeader
@@ -536,19 +553,20 @@ const server = http.createServer((req, res) => {
       req.on('data', chunk => { body += chunk; });
       req.on('end', () => {
         let key = null;
+        let parsedJson = null;
         try {
           if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
             const params = new URLSearchParams(body);
             key = params.get('key');
           } else {
-            const parsed = JSON.parse(body || '{}');
-            key = parsed.key;
+            parsedJson = JSON.parse(body || '{}');
+            key = parsedJson.key;
           }
         } catch (_) {
           const params = new URLSearchParams(body);
           key = params.get('key');
         }
-        handleStatusRequest(key);
+        handleStatusRequest(key, parsedJson);
       });
       return;
     } else {

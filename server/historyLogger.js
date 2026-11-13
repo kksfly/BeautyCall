@@ -4,6 +4,7 @@ const path = require('path');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const HISTORY_FILE = path.join(DATA_DIR, 'connection_history.json');
+const BACKUP_FILE = path.join(DATA_DIR, 'connection_history.bak.json');
 const MAX_LOGS_LIMIT = 1000; // 최대 보관 로그 수
 
 // 데이터 디렉토리 자동 생성
@@ -51,28 +52,47 @@ function formatDuration(ms) {
 }
 
 /**
- * 파일에서 기존 접속 이력 로드
+ * 파일에서 기존 접속 이력 로드 (메인 파일 실패 시 백업 파일 자동 복구)
  */
 function loadHistoryFromFile() {
-  try {
-    if (fs.existsSync(HISTORY_FILE)) {
-      const data = fs.readFileSync(HISTORY_FILE, 'utf-8');
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
-        historyCache = parsed;
-        console.log(`📜 [History Logger] 기존 접속 이력 ${historyCache.length}건을 파일에서 불러왔습니다.`);
-        return;
+  const tryFile = (filePath) => {
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf-8');
+      if (data && data.trim().length > 0) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
+    }
+    return null;
+  };
+
+  try {
+    const mainData = tryFile(HISTORY_FILE);
+    if (mainData) {
+      historyCache = mainData;
+      console.log(`📜 [History Logger] 기존 접속 이력 ${historyCache.length}건을 파일에서 불러왔습니다.`);
+      return;
+    }
+
+    const backupData = tryFile(BACKUP_FILE);
+    if (backupData) {
+      historyCache = backupData;
+      console.log(`📜 [History Logger] 백업 파일에서 접속 이력 ${historyCache.length}건을 복구했습니다.`);
+      saveHistoryToFile();
+      return;
     }
   } catch (err) {
     console.warn('[History Logger] 접속 이력 파일 읽기 실패 (새로 시작):', err.message);
   }
+
   historyCache = [];
   saveHistoryToFile();
 }
 
 /**
- * 접속 이력을 파일에 영구 저장
+ * 접속 이력을 파일에 영구 저장 (Atomic Write + Backup 동시 유지)
  */
 function saveHistoryToFile() {
   try {
@@ -80,10 +100,65 @@ function saveHistoryToFile() {
     if (historyCache.length > MAX_LOGS_LIMIT) {
       historyCache = historyCache.slice(0, MAX_LOGS_LIMIT);
     }
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(historyCache, null, 2), 'utf-8');
+    const jsonStr = JSON.stringify(historyCache, null, 2);
+
+    // 원자적 파일 쓰기 (임시 파일 -> 원본 교체로 깨짐 방지)
+    const tmpFile = `${HISTORY_FILE}.tmp`;
+    fs.writeFileSync(tmpFile, jsonStr, 'utf-8');
+    fs.renameSync(tmpFile, HISTORY_FILE);
+
+    // 백업 파일도 함께 보관
+    fs.writeFileSync(BACKUP_FILE, jsonStr, 'utf-8');
   } catch (err) {
     console.error('[History Logger] 접속 이력 파일 저장 실패:', err.message);
   }
+}
+
+/**
+ * 외부(브라우저 로컬 스토리지 백업 또는 JSON 파일 업로드)로부터 히스토리 복원 및 병합
+ */
+function restoreHistory(importedEntries, isMerge = true) {
+  if (!Array.isArray(importedEntries) || importedEntries.length === 0) {
+    return { success: false, message: 'Invalid or empty entries array', count: historyCache.length };
+  }
+
+  if (!isMerge) {
+    historyCache = importedEntries.slice(0, MAX_LOGS_LIMIT);
+  } else {
+    // 기존 캐시와 중복 제거하며 병합 (고유 key: entry.id 또는 timestamp_socketId_type)
+    const seen = new Set();
+    const merged = [];
+
+    const getKey = (item) => item.id || `${item.timestamp}_${item.socketId}_${item.type}`;
+
+    // 1. 기존 캐시 먼저 등록
+    historyCache.forEach(item => {
+      const k = getKey(item);
+      if (!seen.has(k)) {
+        seen.add(k);
+        merged.push(item);
+      }
+    });
+
+    // 2. 임포트된 항목 추가 등록
+    importedEntries.forEach(item => {
+      if (item && item.type && item.timestamp) {
+        const k = getKey(item);
+        if (!seen.has(k)) {
+          seen.add(k);
+          merged.push(item);
+        }
+      }
+    });
+
+    // 최신 타임스탬프 순 내림차순 정렬
+    merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    historyCache = merged.slice(0, MAX_LOGS_LIMIT);
+  }
+
+  saveHistoryToFile();
+  console.log(`🔄 [History Logger] 접속 이력 복원/동기화 완료 (총 ${historyCache.length}건 보관 중)`);
+  return { success: true, count: historyCache.length };
 }
 
 // 서버 시작 시 기존 로그 로드
@@ -161,6 +236,7 @@ module.exports = {
   recordLeave,
   getHistory,
   getRawHistoryJson,
+  restoreHistory,
   formatKST,
   formatDuration
 };
