@@ -3,9 +3,12 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
+const historyLogger = require('./historyLogger');
+const { renderStatusLogin, renderStatusDashboard } = require('./statusRenderer');
 
 const PORT = process.env.PORT || 3500;
 const MAX_USERS_PER_ROOM = 4;
+const SERVER_START_TIME = Date.now(); // 서버 기동 시각
 
 // 🔒 보안 설정 (지인 4인 전용 비공개 액세스 키 및 무차별 대입 방어)
 const ACCESS_KEY = process.env.APP_ACCESS_KEY || 'danicajoy';
@@ -14,6 +17,28 @@ const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24시간 (하루 동안 차단
 
 // IP별 실패 횟수 및 차단 관리 Map: ip -> { attempts: number, blockedUntil: number }
 const ipTracker = new Map();
+
+/**
+ * HTTP 요청 쿠키 파서
+ */
+function parseCookies(req) {
+  const list = {};
+  const rc = req.headers.cookie;
+  if (rc) {
+    rc.split(';').forEach((cookie) => {
+      const parts = cookie.split('=');
+      const name = parts.shift().trim();
+      if (name) {
+        try {
+          list[name] = decodeURIComponent(parts.join('='));
+        } catch (_) {
+          list[name] = parts.join('=');
+        }
+      }
+    });
+  }
+  return list;
+}
 
 /**
  * 프록시(Render 등)를 고려한 실제 클라이언트 IP 추출
@@ -389,7 +414,150 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  // 5. 정적 웹 파일 서빙 (브라우저 접속 지원)
+  // 5. 📊 실시간 상태 및 접속 이력 대시보드 (/status, /api/status, /api/status/export)
+  if (parsedUrl.pathname === '/status' || parsedUrl.pathname === '/api/status' || parsedUrl.pathname === '/api/status/export') {
+    const cookies = parseCookies(req);
+
+    const handleStatusRequest = (providedKey) => {
+      // 키 검증: 본문 전달 키 > 쿼리 키 > 쿠키 > 헤더 순
+      const keyCandidate = providedKey ||
+                           parsedUrl.searchParams.get('key') ||
+                           cookies['beautycall_admin_key'] ||
+                           req.headers['x-access-key'] ||
+                           (req.headers['authorization']?.replace(/^Bearer\s+/i, ''));
+
+      const isAuthenticated = (keyCandidate === ACCESS_KEY);
+
+      if (isAuthenticated) {
+        // 🛡️ 인증 성공: 실패 카운트 리셋 & 자동 로그인 유지용 쿠키 발급
+        ipTracker.delete(clientIp);
+        const cookieHeader = `beautycall_admin_key=${encodeURIComponent(ACCESS_KEY)}; Path=/; Max-Age=86400; SameSite=Lax`;
+
+        // A. 접속 이력 JSON 파일 다운로드 (/api/status/export)
+        if (parsedUrl.pathname === '/api/status/export') {
+          res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="connection_history.json"',
+            'Set-Cookie': cookieHeader
+          });
+          res.end(historyLogger.getRawHistoryJson());
+          return;
+        }
+
+        // B. 상태 JSON 데이터 API (/api/status)
+        if (parsedUrl.pathname === '/api/status') {
+          res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Set-Cookie': cookieHeader
+          });
+          res.end(JSON.stringify({
+            success: true,
+            activeRooms: rooms,
+            history: historyLogger.getHistory(200),
+            uptime: Date.now() - SERVER_START_TIME,
+            serverTime: Date.now()
+          }));
+          return;
+        }
+
+        // C. 웹 대시보드 화면 렌더링 (/status)
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Set-Cookie': cookieHeader
+        });
+        res.end(renderStatusDashboard({
+          activeRooms: rooms,
+          history: historyLogger.getHistory(200),
+          uptime: Date.now() - SERVER_START_TIME,
+          serverTime: Date.now(),
+          accessKey: ACCESS_KEY
+        }));
+        return;
+      }
+
+      // 키가 입력되었으나 틀린 경우 -> 실패 횟수 증가 및 IP 차단 메커니즘 연동
+      if (keyCandidate) {
+        const currentAttempts = (ipStatus.attempts || 0) + 1;
+        console.warn(`[Status Auth Failed] IP: ${clientIp} (Attempt ${currentAttempts}/${MAX_ATTEMPTS})`);
+
+        if (currentAttempts >= MAX_ATTEMPTS) {
+          ipTracker.set(clientIp, {
+            attempts: currentAttempts,
+            blockedUntil: Date.now() + BLOCK_DURATION_MS
+          });
+          console.error(`🚨 [Status IP BLOCKED for 24H] IP: ${clientIp} exceeded ${MAX_ATTEMPTS} attempts.`);
+          res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(renderBlockedHtml(24));
+          return;
+        }
+
+        ipTracker.set(clientIp, {
+          attempts: currentAttempts,
+          blockedUntil: null
+        });
+
+        const left = MAX_ATTEMPTS - currentAttempts;
+        if (parsedUrl.pathname.startsWith('/api/')) {
+          res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({
+            success: false,
+            message: `Incorrect access key. (${left} attempt${left > 1 ? 's' : ''} left)`,
+            remainingAttempts: left
+          }));
+          return;
+        }
+
+        res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(renderStatusLogin({
+          error: `Incorrect security key. (${left} attempt${left > 1 ? 's' : ''} left)`,
+          attemptsLeft: left
+        }));
+        return;
+      }
+
+      // 키가 입력되지 않은 최초 접근: 비밀번호 입력 모달 화면 표시
+      if (parsedUrl.pathname.startsWith('/api/')) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: false,
+          message: 'Authentication required. Provide key query or header.'
+        }));
+        return;
+      }
+
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(renderStatusLogin({
+        attemptsLeft: MAX_ATTEMPTS - (ipStatus.attempts || 0)
+      }));
+    };
+
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        let key = null;
+        try {
+          if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+            const params = new URLSearchParams(body);
+            key = params.get('key');
+          } else {
+            const parsed = JSON.parse(body || '{}');
+            key = parsed.key;
+          }
+        } catch (_) {
+          const params = new URLSearchParams(body);
+          key = params.get('key');
+        }
+        handleStatusRequest(key);
+      });
+      return;
+    } else {
+      handleStatusRequest(null);
+      return;
+    }
+  }
+
+  // 6. 정적 웹 파일 서빙 (브라우저 접속 지원)
   let filePath = '';
   if (parsedUrl.pathname === '/' || parsedUrl.pathname === '/index.html') {
     filePath = path.join(PROJECT_ROOT, 'src', 'index.html');
@@ -471,7 +639,7 @@ io.on('connection', (socket) => {
     if (nickname) {
       for (const existingId of Object.keys(rooms[roomId])) {
         if (existingId !== socket.id && rooms[roomId][existingId]?.nickname === nickname) {
-          console.warn(`[Cleanup Ghost Socket] 동일 닉네임(${nickname})의 이전 소켓(${existingId})을 정리합니다.`);
+          console.warn(`[Cleanup Ghost Socket] Cleaning up previous ghost socket (${existingId}) for nickname (${nickname}).`);
           delete rooms[roomId][existingId];
           const oldSocket = io.sockets.sockets.get(existingId);
           if (oldSocket) {
@@ -488,11 +656,23 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const clientIp = socket.handshake.headers['x-forwarded-for']?.split(',')[0].trim() || socket.handshake.address || 'unknown';
+
     rooms[roomId][socket.id] = {
       nickname: nickname || `User_${socket.id.substring(0, 4)}`,
-      joinedAt: Date.now()
+      joinedAt: Date.now(),
+      ip: clientIp
     };
     socket.join(roomId);
+
+    // 📜 접속 이력 영구 기록 (JOIN)
+    historyLogger.recordJoin({
+      socketId: socket.id,
+      nickname: rooms[roomId][socket.id].nickname,
+      roomId,
+      ip: clientIp,
+      joinedAt: rooms[roomId][socket.id].joinedAt
+    });
 
     const existingUsers = currentUsers.map(id => ({
       socketId: id,
@@ -562,6 +742,16 @@ io.on('connection', (socket) => {
       if (rooms[roomId] && rooms[roomId][socket.id]) {
         const user = rooms[roomId][socket.id];
         delete rooms[roomId][socket.id];
+
+        // 📜 접속 이력 영구 기록 (LEAVE)
+        historyLogger.recordLeave({
+          socketId: socket.id,
+          nickname: user.nickname,
+          roomId,
+          ip: user.ip || 'unknown',
+          joinedAt: user.joinedAt,
+          leftAt: Date.now()
+        });
 
         if (user.isScreenSharing) {
           socket.to(roomId).emit('screen-share-stopped', {
